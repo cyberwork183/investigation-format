@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="48" height="48" fill="none">
+  <circle cx="50" cy="50" r="46" stroke="#1e3a8a" stroke-width="3" fill="#f8fafc"/>
+  <circle cx="50" cy="50" r="41" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <!-- Shield -->
+  <path d="M50 18 L76 30 C76 56 50 78 50 78 C50 78 24 56 24 30 Z" fill="#1e3a8a" stroke="#1d4ed8" stroke-width="2"/>
+  <!-- Star -->
+  <polygon points="50,26 53.5,36.8 65,36.8 55.7,43.5 59.2,54.2 50,47.5 40.8,54.2 44.3,43.5 35,36.8 46.5,36.8" fill="#fbbf24"/>
+  <!-- Scale / Law balance icon -->
+  <path d="M50 56 L50 68 M40 68 L60 68" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
