@@ -1,0 +1,200 @@
+/**
+ * documentTypes.js
+ * Registry and metadata for all supported official police investigation documents
+ */
+
+export const DOCUMENT_TYPES = [
+  {
+    id: 'form3',
+    title: 'Arrest / Court Surrender Form — Form III',
+    titleMr: 'अटकेचा पंचनामा / न्यायालयाच्या स्वाधीन होण्याचा नमुना (फॉर्म ३)',
+    badge: 'Statutory Memo',
+    badgeClass: 'badge-primary',
+    category: 'Arrest & Custody',
+    categoryMr: 'अटक व ताबा',
+    description: 'Statutory 17-section arrest memo under CrPC/BNSS with accused photo, physical features, articles search, socio-economic profile, and witness signatures.',
+    descriptionMr: 'आरोपीचा फोटो, शारीरिक वैशिष्ट्ये, अंगझडती, सामाजिक-आर्थिक माहिती व पंचांच्या सह्यांसह १७ कलमी वैधानिक नमुना.',
+    templateFile: '/template/arrest-form-master.docx',
+    icon: 'memo'
+  },
+  {
+    id: 'remand',
+    title: 'Police Custody Remand Application (PCR)',
+    titleMr: 'पोलीस कोठडी रिमांड अर्ज (PCR)',
+    badge: 'Court Application',
+    badgeClass: 'badge-danger',
+    category: 'Court Remand',
+    categoryMr: 'न्यायालयीन रिमांड',
+    description: 'Official application to Judicial Magistrate for Police Custody Remand with 11-point summary table, case brief, bank layer details, grounds of arrest, and investigation points.',
+    descriptionMr: '११ कलमी गोषवारा तक्ता, गुन्ह्याची थोडक्यात हकीकत, बँक लेयर तपशील, अटकेची कारणे व तपास मुद्दे यांसह मा. न्यायालयाकडे पोलीस कोठडी मागणी अर्ज.',
+    templateFile: '/template/remand-application-master.docx',
+    icon: 'gavel'
+  },
+  {
+    id: 'arrest_permission',
+    title: 'Permission to Arrest Application',
+    titleMr: 'आरोपीस अटक करण्याची परवानगी अर्ज',
+    badge: 'Court Application',
+    badgeClass: 'badge-warning',
+    category: 'Court Permission',
+    categoryMr: 'न्यायालयीन परवानगी',
+    description: 'Application to Judicial Magistrate requesting permission to arrest an accused produced on Production Warrant from another prison/jurisdiction.',
+    descriptionMr: 'इतर कारागृहातून प्रोडक्शन वॉरंटद्वारे हजर केलेल्या आरोपीस नमुद गुन्ह्यात अटक करण्याची परवानगी मिळण्यासाठी मा. न्यायालयासमक्ष अर्ज.',
+    templateFile: '/template/arrest-permission-master.docx',
+    icon: 'shield-check'
+  },
+  {
+    id: 'medical',
+    title: 'Medical Examination Request Letter',
+    titleMr: 'वैद्यकीय तपासणी विनंती पत्र',
+    badge: 'Official Letter',
+    badgeClass: 'badge-info',
+    category: 'Medical & Custody',
+    categoryMr: 'वैद्यकीय व बंदिगृह',
+    description: 'Official requisition letter to Medical Officer (General Hospital) for general physical examination of an accused in custody or prior to arrest.',
+    descriptionMr: 'पोलीस कोठडीत असलेल्या किंवा अटक करावयाच्या आरोपीची सर्वसाधारण शारीरिक व वैद्यकीय तपासणी करण्यासाठी वैद्यकीय अधिकाऱ्यांना पत्र.',
+    templateFile: '/template/medical-letter-master.docx',
+    icon: 'stethoscope'
+  },
+  {
+    id: 'lockup_ps',
+    title: 'Lockup Placement Request Letter (Police Station)',
+    titleMr: 'आरोपीला बंदिगृहात (लॉकअपमध्ये) ठेवणेबाबत पत्र - पोलीस ठाणे',
+    badge: 'Inter-Station Requisition',
+    badgeClass: 'badge-secondary',
+    category: 'Medical & Custody',
+    categoryMr: 'वैद्यकीय व बंदिगृह',
+    description: 'Official request to In-Charge / PI of another Police Station (e.g. Sadar PS) to keep remanded accused in their lockup facility due to lack of lockup at Cyber PS.',
+    descriptionMr: 'सायबर पोलीस ठाण्यात स्वतंत्र बंदीगृह नसल्याने आरोपीस सुरक्षिततेसाठी दुसऱ्या पोलीस ठाण्याच्या लॉकअपमध्ये ठेवण्याची विनंती पत्र.',
+    templateFile: '/template/lockup-placement-ps-master.docx',
+    icon: 'lock'
+  },
+  {
+    id: 'lockup_acp',
+    title: 'Lockup Placement Intimation Letter (ACP Crime)',
+    titleMr: 'आरोपीला बंदिगृहात ठेवणेबाबत पत्र - मा. सहा. पोलीस आयुक्त',
+    badge: 'Supervisory Letter',
+    badgeClass: 'badge-secondary',
+    category: 'Medical & Custody',
+    categoryMr: 'वैद्यकीय व बंदिगृह',
+    description: 'Official supervisory intimation letter to Assistant Commissioner of Police (Crime) regarding placement of accused in another police station lockup.',
+    descriptionMr: 'आरोपीस दुसऱ्या पोलीस ठाण्याच्या बंदिगृहात ठेवण्याबाबत मा. सहायक पोलीस आयुक्त (गुन्हे) यांना पाठविण्यात येणारे माहिती/परवानगी पत्र.',
+    templateFile: '/template/lockup-placement-acp-master.docx',
+    icon: 'building'
+  },
+  {
+    id: 'custody_transfer',
+    title: 'Accused Custody Transfer / Release Request Letter',
+    titleMr: 'आरोपी बंदिगृहातून ताब्यात मिळणेबाबत पत्र',
+    badge: 'Custody Handover',
+    badgeClass: 'badge-success',
+    category: 'Medical & Custody',
+    categoryMr: 'वैद्यकीय व बंदिगृह',
+    description: 'Official request to lockup Police Station requesting temporary handover of remanded accused from lockup for investigation or court production.',
+    descriptionMr: 'लॉकअपमध्ये ठेवलेल्या आरोपीस पुढील तपास किंवा न्यायालयीन हजेरीसाठी तात्पुरता ताब्यात मिळण्याबाबतचे अधिकृत विनंती पत्र.',
+    templateFile: '/template/custody-transfer-master.docx',
+    icon: 'user-check'
+  }
+];
+
+/**
+ * 4 Main Document Categories / Cards displayed on the Dashboard
+ */
+export const MAIN_DASHBOARD_CARDS = [
+  {
+    id: 'form3',
+    cardKey: 'form3',
+    isDirectDoc: true,
+    title: 'Arrest / Court Surrender Form (Form III)',
+    titleMr: 'अटकेचा पंचनामा / न्यायालयाच्या स्वाधीन होण्याचा नमुना (फॉर्म ३)',
+    badge: 'Statutory Memo',
+    badgeClass: 'badge-primary',
+    category: 'Arrest & Custody',
+    categoryMr: 'अटक व ताबा',
+    description: 'Statutory 17-section arrest memo under CrPC/BNSS with accused photo, physical features, search of articles, and witnesses.',
+    descriptionMr: 'आरोपीचा फोटो, शारीरिक वैशिष्ट्ये, अंगझडती, सामाजिक-आर्थिक माहिती व पंचांच्या सह्यांसह १७ कलमी वैधानिक नमुना.',
+    icon: 'memo'
+  },
+  {
+    id: 'remand',
+    cardKey: 'remand',
+    isDirectDoc: true,
+    title: 'Police Custody Remand Application (PCR)',
+    titleMr: 'पोलीस कोठडी रिमांड अर्ज (PCR)',
+    badge: 'Court Application',
+    badgeClass: 'badge-danger',
+    category: 'Court Remand',
+    categoryMr: 'न्यायालयीन रिमांड',
+    description: 'Official application to Judicial Magistrate for Police Custody Remand with 11-point summary table, case brief, bank layer details, and grounds of arrest.',
+    descriptionMr: '११ कलमी गोषवारा तक्ता, गुन्ह्याची थोडक्यात हकीकत, बँक लेयर तपशील, अटकेची कारणे व तपास मुद्दे यांसह मा. न्यायालयाकडे पोलीस कोठडी मागणी अर्ज.',
+    icon: 'gavel'
+  },
+  {
+    id: 'arrest_permission',
+    cardKey: 'arrest_permission',
+    isDirectDoc: true,
+    title: 'Permission to Arrest Application',
+    titleMr: 'आरोपीस अटक करण्याची परवानगी अर्ज',
+    badge: 'Court Application',
+    badgeClass: 'badge-warning',
+    category: 'Court Permission',
+    categoryMr: 'न्यायालयीन परवानगी',
+    description: 'Application to Judicial Magistrate requesting permission to arrest an accused produced on Production Warrant from another prison/jurisdiction.',
+    descriptionMr: 'इतर कारागृहातून प्रोडक्शन वॉरंटद्वारे हजर केलेल्या आरोपीस नमुद गुन्ह्यात अटक करण्याची परवानगी मिळण्यासाठी मा. न्यायालयासमक्ष अर्ज.',
+    icon: 'shield-check'
+  },
+  {
+    id: 'medical_custody',
+    cardKey: 'medical_custody',
+    isDirectDoc: false,
+    title: 'Medical & Custody Letters',
+    titleMr: 'वैद्यकीय तपासणी व बंदिगृह (लॉकअप) पत्रे',
+    badge: '4 Letter Templates',
+    badgeClass: 'badge-success',
+    category: 'Medical & Custody',
+    categoryMr: 'वैद्यकीय व बंदिगृह',
+    description: 'Requisition letters for Medical Examination, Lockup Placement (PS), ACP Supervisory Intimation, and Custody Transfer/Handover.',
+    descriptionMr: 'वैद्यकीय तपासणी विनंती पत्र, लॉकअप मागणी पत्र (पोलीस ठाणे), लॉकअप माहिती पत्र (मा. एसीपी), व आरोपी ताबा हस्तांतरण/सुटका पत्रे.',
+    icon: 'folder-heart',
+    subDocIds: ['medical', 'lockup_ps', 'lockup_acp', 'custody_transfer']
+  }
+];
+
+export const MEDICAL_CUSTODY_LETTERS = [
+  {
+    id: 'medical',
+    title: 'Medical Examination Request Letter',
+    titleMr: '१. वैद्यकीय तपासणी विनंती पत्र (Medical Examination Letter)',
+    badge: 'Medical Officer',
+    badgeClass: 'badge-info',
+    descMr: 'आरोपीची सर्वसाधारण शारीरिक व वैद्यकीय तपासणी करणेबाबत शासकीय वैद्यकीय अधिकाऱ्यांना पत्र.'
+  },
+  {
+    id: 'lockup_ps',
+    title: 'Lockup Placement Request (Police Station)',
+    titleMr: '२. लॉकअपमध्ये ठेवणेबाबत पत्र - पोलीस ठाणे (Lockup Placement PS)',
+    badge: 'Inter-Station',
+    badgeClass: 'badge-secondary',
+    descMr: 'सायबर ठाण्यात बंदीगृह नसल्याने आरोपीस दुसऱ्या पोलीस ठाण्याच्या लॉकअपमध्ये ठेवण्याची विनंती पत्र.'
+  },
+  {
+    id: 'lockup_acp',
+    title: 'Lockup Placement Intimation (ACP Crime)',
+    titleMr: '३. लॉकअपमध्ये ठेवणेबाबत पत्र - मा. सहा. पोलीस आयुक्त (Lockup ACP)',
+    badge: 'Supervisory',
+    badgeClass: 'badge-secondary',
+    descMr: 'आरोपीस दुसऱ्या ठाण्याच्या बंदिगृहात ठेवण्याबाबत मा. सहायक पोलीस आयुक्त यांना माहिती पत्र.'
+  },
+  {
+    id: 'custody_transfer',
+    title: 'Accused Custody Transfer / Release Request Letter',
+    titleMr: '४. आरोपी बंदिगृहातून ताब्यात मिळणेबाबत पत्र (Custody Transfer)',
+    badge: 'Handover',
+    badgeClass: 'badge-success',
+    descMr: 'लॉकअपमध्ये ठेवलेल्या आरोपीस पुढील तपास किंवा न्यायालयीन हजेरीसाठी तात्पुरता ताब्यात मिळण्याबाबत पत्र.'
+  }
+];
+
+export function getDocumentTypeById(id) {
+  return DOCUMENT_TYPES.find(d => d.id === id) || DOCUMENT_TYPES[0];
+}

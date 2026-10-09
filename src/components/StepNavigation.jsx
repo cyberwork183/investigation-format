@@ -11,16 +11,37 @@ const STEPS = [
   { num: 8, label: 'Witnesses, Officer & Review' }
 ];
 
-export default function StepNavigation({ currentStep, onStepChange, sectionErrors = {}, validatedSteps = {} }) {
-  const progressPercent = (currentStep / STEPS.length) * 100;
+export default function StepNavigation({
+  steps = STEPS,
+  currentStep,
+  onStepChange,
+  onGoToStep,
+  sectionErrors = {},
+  validatedSteps = {},
+  title = 'Form Sections',
+  marathiTitle = 'अर्जाचे विभाग'
+}) {
+  const stepList = steps && steps.length > 0 ? steps : STEPS;
+  const progressPercent = Math.min(100, Math.round((currentStep / stepList.length) * 100));
+
+  const handleStepClick = (stepNum) => {
+    if (typeof onStepChange === 'function') {
+      onStepChange(stepNum);
+    } else if (typeof onGoToStep === 'function') {
+      onGoToStep(stepNum);
+    }
+  };
 
   return (
     <aside className="step-nav-card" aria-label="Section navigation">
-      <h2>Form Sections</h2>
+      <h2>
+        {title}
+        {marathiTitle && <span className="marathi-header" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-light)', marginTop: '2px' }}>({marathiTitle})</span>}
+      </h2>
       <div className="progress-bar-container">
         <div className="progress-info">
           <span>Completion Progress</span>
-          <span id="progressText">Step {currentStep} of {STEPS.length}</span>
+          <span id="progressText">Step {currentStep} of {stepList.length}</span>
         </div>
         <div className="progress-track">
           <div
@@ -33,7 +54,7 @@ export default function StepNavigation({ currentStep, onStepChange, sectionError
 
       <nav>
         <ul className="step-list" id="stepList">
-          {STEPS.map((s) => {
+          {stepList.map((s) => {
             const hasError = sectionErrors[s.num] && sectionErrors[s.num].length > 0;
             const isValidated = validatedSteps[s.num];
             let itemClass = 'step-item';
@@ -49,11 +70,18 @@ export default function StepNavigation({ currentStep, onStepChange, sectionError
                 key={s.num}
                 className={itemClass}
                 data-step={s.num}
-                onClick={() => onStepChange(s.num)}
+                onClick={() => handleStepClick(s.num)}
                 style={{ cursor: 'pointer' }}
               >
                 <span className="step-number">{s.num}</span>
-                <span>{s.label}</span>
+                <span style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span>{s.label}</span>
+                  {s.marathi && (
+                    <span className="marathi-subtext" style={{ fontSize: '0.78rem', color: 'var(--text-light)', fontWeight: 'normal' }}>
+                      {s.marathi}
+                    </span>
+                  )}
+                </span>
               </li>
             );
           })}

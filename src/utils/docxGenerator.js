@@ -6,7 +6,7 @@
  */
 
 import JSZip from 'jszip';
-import { MASTER_TEMPLATE_BASE64 } from './templateBase64';
+import { MASTER_TEMPLATE_BASE64 } from './templateBase64.js';
 
 const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';

@@ -1,48 +1,100 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import SecurityBanner from './components/SecurityBanner';
-import StepNavigation from './components/StepNavigation';
+import Dashboard from './components/Dashboard';
+import DocumentTopBar from './components/shared/DocumentTopBar';
 import ClearModal from './components/ClearModal';
 import Toast from './components/Toast';
 
-import Step1CaseInfo from './components/panels/Step1CaseInfo';
-import Step2ArrestCourt from './components/panels/Step2ArrestCourt';
-import Step3ActsStatus from './components/panels/Step3ActsStatus';
-import Step4AccusedParticulars from './components/panels/Step4AccusedParticulars';
-import Step5PhysicalFeatures from './components/panels/Step5PhysicalFeatures';
-import Step6CustodyArticles from './components/panels/Step6CustodyArticles';
-import Step7SocioEconomic from './components/panels/Step7SocioEconomic';
-import Step8WitnessesOfficerReview from './components/panels/Step8WitnessesOfficerReview';
+// Dedicated Forms
+import Form3Wizard from './components/forms/Form3Wizard';
+import RemandForm from './components/forms/RemandForm';
+import MedicalLetterForm from './components/forms/MedicalLetterForm';
+import LockupPsForm from './components/forms/LockupPsForm';
+import LockupAcpForm from './components/forms/LockupAcpForm';
+import CustodyTransferForm from './components/forms/CustodyTransferForm';
+import ArrestPermissionForm from './components/forms/ArrestPermissionForm';
+
+import { DOCUMENT_TYPES, getDocumentTypeById } from './utils/documentTypes';
+import {
+  getDefaultForm3Data,
+  getSampleForm3Data,
+  saveForm3Draft,
+  loadForm3Draft,
+  clearForm3Draft,
+  getDefaultRemandData,
+  getSampleRemandData,
+  getDefaultMedicalData,
+  getSampleMedicalData,
+  getDefaultLockupPsData,
+  getSampleLockupPsData,
+  getDefaultLockupAcpData,
+  getSampleLockupAcpData,
+  getDefaultCustodyTransferData,
+  getSampleCustodyTransferData,
+  getDefaultArrestPermissionData,
+  getSampleArrestPermissionData,
+  saveDocDraft,
+  loadDocDraft,
+  clearDocDraft,
+  exportDocDraftJson
+} from './utils/documentSchemas';
 
 import {
-  getDefaultFormData,
-  getSampleFormData,
-  saveDraftToLocalStorage,
-  loadDraftFromLocalStorage,
-  clearDraftFromLocalStorage,
-  exportDraftAsJson
-} from './utils/formData';
-import { validateFormData } from './utils/validation';
-import { processImageFile } from './utils/imageHandler';
-import { generateOfficialDocx, downloadDocxBlob } from './utils/docxGenerator';
+  getStoredSharedDetails,
+  saveStoredSharedDetails,
+  extractSharedDetailsFromDoc,
+  applySharedDetailsToDoc
+} from './utils/shareDetails';
 
 export default function App() {
-  const [formData, setFormData] = useState(() => {
-    const saved = loadDraftFromLocalStorage();
-    return saved || getDefaultFormData();
+  // activeDocId is null for Dashboard, or 'form3', 'remand', 'medical', etc.
+  const [activeDocId, setActiveDocId] = useState(null);
+
+  // Initialize document states from localStorage drafts, populated with shared pool if available
+  const [form3Data, setForm3Data] = useState(() => {
+    const draft = loadForm3Draft() || getDefaultForm3Data();
+    const shared = getStoredSharedDetails();
+    return applySharedDetailsToDoc('form3', draft, shared);
   });
 
-  const [currentStep, setCurrentStep] = useState(1);
-  const [errors, setErrors] = useState({});
-  const [sectionErrors, setSectionErrors] = useState({});
-  const [validatedSteps, setValidatedSteps] = useState({});
+  const [remandData, setRemandData] = useState(() => {
+    const draft = loadDocDraft('remand') || getDefaultRemandData();
+    const shared = getStoredSharedDetails();
+    return applySharedDetailsToDoc('remand', draft, shared);
+  });
 
-  const [photoBuffer, setPhotoBuffer] = useState(null);
-  const [photoDataUrl, setPhotoDataUrl] = useState(null);
-  const [photoError, setPhotoError] = useState('');
+  const [medicalData, setMedicalData] = useState(() => {
+    const draft = loadDocDraft('medical') || getDefaultMedicalData();
+    const shared = getStoredSharedDetails();
+    return applySharedDetailsToDoc('medical', draft, shared);
+  });
+
+  const [lockupPsData, setLockupPsData] = useState(() => {
+    const draft = loadDocDraft('lockup_ps') || getDefaultLockupPsData();
+    const shared = getStoredSharedDetails();
+    return applySharedDetailsToDoc('lockup_ps', draft, shared);
+  });
+
+  const [lockupAcpData, setLockupAcpData] = useState(() => {
+    const draft = loadDocDraft('lockup_acp') || getDefaultLockupAcpData();
+    const shared = getStoredSharedDetails();
+    return applySharedDetailsToDoc('lockup_acp', draft, shared);
+  });
+
+  const [custodyTransferData, setCustodyTransferData] = useState(() => {
+    const draft = loadDocDraft('custody_transfer') || getDefaultCustodyTransferData();
+    const shared = getStoredSharedDetails();
+    return applySharedDetailsToDoc('custody_transfer', draft, shared);
+  });
+
+  const [arrestPermissionData, setArrestPermissionData] = useState(() => {
+    const draft = loadDocDraft('arrest_permission') || getDefaultArrestPermissionData();
+    const shared = getStoredSharedDetails();
+    return applySharedDetailsToDoc('arrest_permission', draft, shared);
+  });
 
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
-  const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
 
   const [toast, setToast] = useState({
     isVisible: false,
@@ -59,277 +111,287 @@ export default function App() {
     }, 3200);
   };
 
-  // Show session restored toast if draft was found on initial mount
-  useEffect(() => {
-    const saved = loadDraftFromLocalStorage();
-    if (saved) {
-      showToast('Restored draft from previous session');
-    }
-  }, []);
-
-  // Debounced draft auto-save
+  // Auto-save drafts with debounce per document
   const autoSaveTimerRef = useRef(null);
   useEffect(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
-      saveDraftToLocalStorage(formData);
-    }, 600);
+      if (activeDocId === 'form3') saveForm3Draft(form3Data);
+      else if (activeDocId === 'remand') saveDocDraft('remand', remandData);
+      else if (activeDocId === 'medical') saveDocDraft('medical', medicalData);
+      else if (activeDocId === 'lockup_ps') saveDocDraft('lockup_ps', lockupPsData);
+      else if (activeDocId === 'lockup_acp') saveDocDraft('lockup_acp', lockupAcpData);
+      else if (activeDocId === 'custody_transfer') saveDocDraft('custody_transfer', custodyTransferData);
+      else if (activeDocId === 'arrest_permission') saveDocDraft('arrest_permission', arrestPermissionData);
+    }, 500);
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [formData]);
+  }, [activeDocId, form3Data, remandData, medicalData, lockupPsData, lockupAcpData, custodyTransferData, arrestPermissionData]);
 
-  const handleFieldChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
-  };
+  /**
+   * Share Details Action:
+   * Collects all currently entered non-empty values from source form,
+   * stores them locally, and populates matching empty fields in all other forms.
+   * Preserves existing non-empty values in other forms.
+   */
+  const handleShareDetails = (sourceDocId, currentFormData) => {
+    const extracted = extractSharedDetailsFromDoc(sourceDocId, currentFormData);
+    const keyCount = Object.keys(extracted).length;
 
-  const handlePhysicalFeatureChange = (key, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      physicalFeatures: {
-        ...prev.physicalFeatures,
-        [key]: value
-      }
-    }));
-  };
-
-  const handleArticleChange = (index, value) => {
-    setFormData((prev) => {
-      const newArticles = [...(prev.articles || ['', '', '', '', '', ''])];
-      newArticles[index] = value;
-      return { ...prev, articles: newArticles };
-    });
-  };
-
-  const handleArticlesNilToggle = (checked) => {
-    setFormData((prev) => ({
-      ...prev,
-      articlesNil: checked,
-      articles: checked
-        ? ['NIL', 'NIL', 'NIL', 'NIL', 'NIL', 'NIL']
-        : ['', '', '', '', '', '']
-    }));
-  };
-
-  const handleGoToStep = (stepNumber) => {
-    if (stepNumber < 1 || stepNumber > 8) return;
-    setCurrentStep(stepNumber);
-
-    if (stepNumber === 8) {
-      const res = validateFormData(formData);
-      setErrors(res.errors);
-      setSectionErrors(res.sectionErrors);
-    }
-
-    const card = document.querySelector('.form-content-card');
-    if (card) {
-      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  const handleFillSample = () => {
-    const sample = getSampleFormData();
-    setFormData(sample);
-    saveDraftToLocalStorage(sample);
-    showToast('Sample test data loaded for demonstration');
-    if (currentStep === 8) {
-      const res = validateFormData(sample);
-      setErrors(res.errors);
-      setSectionErrors(res.sectionErrors);
-    }
-  };
-
-  const handleExportDraft = () => {
-    exportDraftAsJson(formData);
-    showToast('Draft exported as JSON');
-  };
-
-  const handleConfirmClear = () => {
-    clearDraftFromLocalStorage();
-    const defaults = getDefaultFormData();
-    setFormData(defaults);
-    setPhotoBuffer(null);
-    setPhotoDataUrl(null);
-    setPhotoError('');
-    setErrors({});
-    setSectionErrors({});
-    setValidatedSteps({});
-    setIsClearModalOpen(false);
-    setCurrentStep(1);
-    showToast('Form cleared successfully');
-  };
-
-  const handleRefreshReview = () => {
-    const res = validateFormData(formData);
-    setErrors(res.errors);
-    setSectionErrors(res.sectionErrors);
-    showToast('Review data refreshed');
-  };
-
-  const handlePhotoUpload = async (file) => {
-    try {
-      setPhotoError('');
-      const processed = await processImageFile(file);
-      setPhotoBuffer(processed.arrayBuffer);
-      setPhotoDataUrl(processed.dataUrl);
-      showToast('Photograph uploaded and verified successfully');
-    } catch (err) {
-      setPhotoError(err.message);
-      showToast(err.message, false);
-    }
-  };
-
-  const handlePhotoRemove = () => {
-    setPhotoBuffer(null);
-    setPhotoDataUrl(null);
-    setPhotoError('');
-    showToast('Photograph removed');
-  };
-
-  const handleGenerateDocx = async () => {
-    const validation = validateFormData(formData);
-    setErrors(validation.errors);
-    setSectionErrors(validation.sectionErrors);
-
-    if (!validation.isValid) {
-      showToast('Please fix required validation fields before generating DOCX', false);
-      for (let s = 1; s <= 8; s++) {
-        if (validation.sectionErrors[s] && validation.sectionErrors[s].length > 0) {
-          handleGoToStep(s);
-          break;
-        }
-      }
+    if (keyCount === 0) {
+      showToast('No non-empty details to share yet / शेअर करण्यासाठी कोणतीही माहिती भरलेली नाही', false);
       return;
     }
 
-    setIsGeneratingDocx(true);
-    try {
-      const docxBlob = await generateOfficialDocx(formData, photoBuffer);
-      downloadDocxBlob(docxBlob, formData.accusedCode, formData.date);
-      showToast('Official DOCX generated and downloaded successfully!');
-    } catch (err) {
-      console.error('Error generating official DOCX:', err);
-      showToast(`Generation failed: ${err.message}`, false);
-    } finally {
-      setIsGeneratingDocx(false);
+    const currentStored = getStoredSharedDetails();
+    const updatedSharedPool = { ...currentStored, ...extracted };
+    saveStoredSharedDetails(updatedSharedPool);
+
+    // Apply to all document forms (only fills empty fields, preserves existing non-empty data)
+    setForm3Data((prev) => {
+      const updated = sourceDocId === 'form3' ? currentFormData : applySharedDetailsToDoc('form3', prev, updatedSharedPool);
+      saveForm3Draft(updated);
+      return updated;
+    });
+
+    setRemandData((prev) => {
+      const updated = sourceDocId === 'remand' ? currentFormData : applySharedDetailsToDoc('remand', prev, updatedSharedPool);
+      saveDocDraft('remand', updated);
+      return updated;
+    });
+
+    setMedicalData((prev) => {
+      const updated = sourceDocId === 'medical' ? currentFormData : applySharedDetailsToDoc('medical', prev, updatedSharedPool);
+      saveDocDraft('medical', updated);
+      return updated;
+    });
+
+    setLockupPsData((prev) => {
+      const updated = sourceDocId === 'lockup_ps' ? currentFormData : applySharedDetailsToDoc('lockup_ps', prev, updatedSharedPool);
+      saveDocDraft('lockup_ps', updated);
+      return updated;
+    });
+
+    setLockupAcpData((prev) => {
+      const updated = sourceDocId === 'lockup_acp' ? currentFormData : applySharedDetailsToDoc('lockup_acp', prev, updatedSharedPool);
+      saveDocDraft('lockup_acp', updated);
+      return updated;
+    });
+
+    setCustodyTransferData((prev) => {
+      const updated = sourceDocId === 'custody_transfer' ? currentFormData : applySharedDetailsToDoc('custody_transfer', prev, updatedSharedPool);
+      saveDocDraft('custody_transfer', updated);
+      return updated;
+    });
+
+    setArrestPermissionData((prev) => {
+      const updated = sourceDocId === 'arrest_permission' ? currentFormData : applySharedDetailsToDoc('arrest_permission', prev, updatedSharedPool);
+      saveDocDraft('arrest_permission', updated);
+      return updated;
+    });
+
+    showToast(`Details shared! ${keyCount} field(s) available to all other forms. / माहिती इतर फॉर्ममध्ये उपलब्ध केली.`);
+  };
+
+  // Fill sample data for active document
+  const handleFillSample = () => {
+    if (activeDocId === 'form3') {
+      const s = getSampleForm3Data();
+      setForm3Data(s);
+      saveForm3Draft(s);
+    } else if (activeDocId === 'remand') {
+      const s = getSampleRemandData();
+      setRemandData(s);
+      saveDocDraft('remand', s);
+    } else if (activeDocId === 'medical') {
+      const s = getSampleMedicalData();
+      setMedicalData(s);
+      saveDocDraft('medical', s);
+    } else if (activeDocId === 'lockup_ps') {
+      const s = getSampleLockupPsData();
+      setLockupPsData(s);
+      saveDocDraft('lockup_ps', s);
+    } else if (activeDocId === 'lockup_acp') {
+      const s = getSampleLockupAcpData();
+      setLockupAcpData(s);
+      saveDocDraft('lockup_acp', s);
+    } else if (activeDocId === 'custody_transfer') {
+      const s = getSampleCustodyTransferData();
+      setCustodyTransferData(s);
+      saveDocDraft('custody_transfer', s);
+    } else if (activeDocId === 'arrest_permission') {
+      const s = getSampleArrestPermissionData();
+      setArrestPermissionData(s);
+      saveDocDraft('arrest_permission', s);
+    }
+    showToast('Sample test data loaded successfully');
+  };
+
+  // Export draft JSON
+  const handleExportDraft = () => {
+    let dataToExport = null;
+    if (activeDocId === 'form3') dataToExport = form3Data;
+    else if (activeDocId === 'remand') dataToExport = remandData;
+    else if (activeDocId === 'medical') dataToExport = medicalData;
+    else if (activeDocId === 'lockup_ps') dataToExport = lockupPsData;
+    else if (activeDocId === 'lockup_acp') dataToExport = lockupAcpData;
+    else if (activeDocId === 'custody_transfer') dataToExport = custodyTransferData;
+    else if (activeDocId === 'arrest_permission') dataToExport = arrestPermissionData;
+
+    if (dataToExport) {
+      exportDocDraftJson(activeDocId, dataToExport);
+      showToast('Draft JSON exported');
     }
   };
+
+  // Clear current document form
+  const handleConfirmClear = () => {
+    if (activeDocId === 'form3') {
+      clearForm3Draft();
+      setForm3Data(getDefaultForm3Data());
+    } else if (activeDocId === 'remand') {
+      clearDocDraft('remand');
+      setRemandData(getDefaultRemandData());
+    } else if (activeDocId === 'medical') {
+      clearDocDraft('medical');
+      setMedicalData(getDefaultMedicalData());
+    } else if (activeDocId === 'lockup_ps') {
+      clearDocDraft('lockup_ps');
+      setLockupPsData(getDefaultLockupPsData());
+    } else if (activeDocId === 'lockup_acp') {
+      clearDocDraft('lockup_acp');
+      setLockupAcpData(getDefaultLockupAcpData());
+    } else if (activeDocId === 'custody_transfer') {
+      clearDocDraft('custody_transfer');
+      setCustodyTransferData(getDefaultCustodyTransferData());
+    } else if (activeDocId === 'arrest_permission') {
+      clearDocDraft('arrest_permission');
+      setArrestPermissionData(getDefaultArrestPermissionData());
+    }
+    setIsClearModalOpen(false);
+    showToast('Form cleared successfully');
+  };
+
+  // When opening a document from dashboard, ensure any stored shared details populate empty fields
+  const handleSelectDoc = (id) => {
+    const shared = getStoredSharedDetails();
+    if (Object.keys(shared).length > 0) {
+      if (id === 'form3') setForm3Data((prev) => applySharedDetailsToDoc('form3', prev, shared));
+      else if (id === 'remand') setRemandData((prev) => applySharedDetailsToDoc('remand', prev, shared));
+      else if (id === 'medical') setMedicalData((prev) => applySharedDetailsToDoc('medical', prev, shared));
+      else if (id === 'lockup_ps') setLockupPsData((prev) => applySharedDetailsToDoc('lockup_ps', prev, shared));
+      else if (id === 'lockup_acp') setLockupAcpData((prev) => applySharedDetailsToDoc('lockup_acp', prev, shared));
+      else if (id === 'custody_transfer') setCustodyTransferData((prev) => applySharedDetailsToDoc('custody_transfer', prev, shared));
+      else if (id === 'arrest_permission') setArrestPermissionData((prev) => applySharedDetailsToDoc('arrest_permission', prev, shared));
+    }
+    setActiveDocId(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const activeDocType = activeDocId ? getDocumentTypeById(activeDocId) : null;
 
   return (
     <div className="app-root">
       <Header
-        onFillSample={handleFillSample}
-        onExportDraft={handleExportDraft}
-        onOpenClearModal={() => setIsClearModalOpen(true)}
+        activeDocType={activeDocType}
+        onBackToDashboard={activeDocId ? () => setActiveDocId(null) : null}
+        onFillSample={activeDocId ? handleFillSample : null}
+        onExportDraft={activeDocId ? handleExportDraft : null}
+        onOpenClearModal={activeDocId ? () => setIsClearModalOpen(true) : null}
       />
 
       <SecurityBanner />
 
-      <main className="main-layout">
-        <StepNavigation
-          currentStep={currentStep}
-          onStepChange={handleGoToStep}
-          sectionErrors={sectionErrors}
-          validatedSteps={validatedSteps}
-        />
+      <main className="main-content-wrapper">
+        {/* If no document selected, show Dashboard */}
+        {!activeDocId && (
+          <Dashboard
+            onSelectDoc={handleSelectDoc}
+          />
+        )}
 
-        <section className="form-content-card">
-          <form id="arrestForm" noValidate onSubmit={(e) => e.preventDefault()}>
-            {currentStep === 1 && (
-              <Step1CaseInfo
-                formData={formData}
-                onChange={handleFieldChange}
-                errors={errors}
-                onNext={() => handleGoToStep(2)}
+        {/* If a document is selected, render its dedicated form */}
+        {activeDocId && (
+          <div className="active-doc-view">
+            <DocumentTopBar
+              docType={activeDocType}
+              onBackToDashboard={() => setActiveDocId(null)}
+              onFillSample={handleFillSample}
+              onExportDraft={handleExportDraft}
+              onOpenClearModal={() => setIsClearModalOpen(true)}
+            />
+
+            {activeDocId === 'form3' && (
+              <Form3Wizard
+                formData={form3Data}
+                setFormData={setForm3Data}
+                showToast={showToast}
+                onShareDetails={(data) => handleShareDetails('form3', data)}
               />
             )}
 
-            {currentStep === 2 && (
-              <Step2ArrestCourt
-                formData={formData}
-                onChange={handleFieldChange}
-                errors={errors}
-                onPrev={() => handleGoToStep(1)}
-                onNext={() => handleGoToStep(3)}
+            {activeDocId === 'remand' && (
+              <RemandForm
+                formData={remandData}
+                setFormData={setRemandData}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('remand', data)}
               />
             )}
 
-            {currentStep === 3 && (
-              <Step3ActsStatus
-                formData={formData}
-                onChange={handleFieldChange}
-                errors={errors}
-                onPrev={() => handleGoToStep(2)}
-                onNext={() => handleGoToStep(4)}
+            {activeDocId === 'medical' && (
+              <MedicalLetterForm
+                formData={medicalData}
+                setFormData={setMedicalData}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('medical', data)}
               />
             )}
 
-            {currentStep === 4 && (
-              <Step4AccusedParticulars
-                formData={formData}
-                onChange={handleFieldChange}
-                errors={errors}
-                onPrev={() => handleGoToStep(3)}
-                onNext={() => handleGoToStep(5)}
+            {activeDocId === 'lockup_ps' && (
+              <LockupPsForm
+                formData={lockupPsData}
+                setFormData={setLockupPsData}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('lockup_ps', data)}
               />
             )}
 
-            {currentStep === 5 && (
-              <Step5PhysicalFeatures
-                formData={formData}
-                onChange={handleFieldChange}
-                onPhysicalFeatureChange={handlePhysicalFeatureChange}
-                onPrev={() => handleGoToStep(4)}
-                onNext={() => handleGoToStep(6)}
+            {activeDocId === 'lockup_acp' && (
+              <LockupAcpForm
+                formData={lockupAcpData}
+                setFormData={setLockupAcpData}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('lockup_acp', data)}
               />
             )}
 
-            {currentStep === 6 && (
-              <Step6CustodyArticles
-                formData={formData}
-                onChange={handleFieldChange}
-                onArticleChange={handleArticleChange}
-                onArticlesNilToggle={handleArticlesNilToggle}
-                onPrev={() => handleGoToStep(5)}
-                onNext={() => handleGoToStep(7)}
+            {activeDocId === 'custody_transfer' && (
+              <CustodyTransferForm
+                formData={custodyTransferData}
+                setFormData={setCustodyTransferData}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('custody_transfer', data)}
               />
             )}
 
-            {currentStep === 7 && (
-              <Step7SocioEconomic
-                formData={formData}
-                onChange={handleFieldChange}
-                onPrev={() => handleGoToStep(6)}
-                onNext={() => handleGoToStep(8)}
+            {activeDocId === 'arrest_permission' && (
+              <ArrestPermissionForm
+                formData={arrestPermissionData}
+                setFormData={setArrestPermissionData}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('arrest_permission', data)}
               />
             )}
-
-            {currentStep === 8 && (
-              <Step8WitnessesOfficerReview
-                formData={formData}
-                onChange={handleFieldChange}
-                errors={errors}
-                hasPhoto={!!photoBuffer}
-                photoDataUrl={photoDataUrl}
-                photoError={photoError}
-                onPhotoUpload={handlePhotoUpload}
-                onPhotoRemove={handlePhotoRemove}
-                isGeneratingDocx={isGeneratingDocx}
-                onGenerateDocx={handleGenerateDocx}
-                onRefreshReview={handleRefreshReview}
-                onGoToStep={handleGoToStep}
-                onPrev={() => handleGoToStep(7)}
-              />
-            )}
-          </form>
-        </section>
+          </div>
+        )}
       </main>
 
       <ClearModal
