@@ -14,14 +14,15 @@ import LockupPsForm from './components/forms/LockupPsForm';
 import LockupAcpForm from './components/forms/LockupAcpForm';
 import CustodyTransferForm from './components/forms/CustodyTransferForm';
 import ArrestPermissionForm from './components/forms/ArrestPermissionForm';
+import Notice352Form from './components/forms/Notice352Form';
+import AtakSanhaForm from './components/forms/AtakSanhaForm';
+import Notice47Form from './components/forms/Notice47Form';
+import Notice48Form from './components/forms/Notice48Form';
 
 import { DOCUMENT_TYPES, getDocumentTypeById } from './utils/documentTypes';
 import {
   getDefaultForm3Data,
   getSampleForm3Data,
-  saveForm3Draft,
-  loadForm3Draft,
-  clearForm3Draft,
   getDefaultRemandData,
   getSampleRemandData,
   getDefaultMedicalData,
@@ -34,9 +35,14 @@ import {
   getSampleCustodyTransferData,
   getDefaultArrestPermissionData,
   getSampleArrestPermissionData,
-  saveDocDraft,
-  loadDocDraft,
-  clearDocDraft,
+  getDefaultNotice352Data,
+  getSampleNotice352Data,
+  getDefaultAtakSanhaData,
+  getSampleAtakSanhaData,
+  getDefaultNotice47Data,
+  getSampleNotice47Data,
+  getDefaultNotice48Data,
+  getSampleNotice48Data,
   exportDocDraftJson
 } from './utils/documentSchemas';
 
@@ -48,51 +54,25 @@ import {
 } from './utils/shareDetails';
 
 export default function App() {
-  // activeDocId is null for Dashboard, or 'form3', 'remand', 'medical', etc.
+  // activeDocId is null for Dashboard, or 'form3', 'remand', 'medical', 'notice_35_2', etc.
   const [activeDocId, setActiveDocId] = useState(null);
 
-  // Initialize document states from localStorage drafts, populated with shared pool if available
+  // Form III initializes with predefined sample data as per requirement
   const [form3Data, setForm3Data] = useState(() => {
-    const draft = loadForm3Draft() || getDefaultForm3Data();
-    const shared = getStoredSharedDetails();
-    return applySharedDetailsToDoc('form3', draft, shared);
+    return getSampleForm3Data();
   });
 
-  const [remandData, setRemandData] = useState(() => {
-    const draft = loadDocDraft('remand') || getDefaultRemandData();
-    const shared = getStoredSharedDetails();
-    return applySharedDetailsToDoc('remand', draft, shared);
-  });
-
-  const [medicalData, setMedicalData] = useState(() => {
-    const draft = loadDocDraft('medical') || getDefaultMedicalData();
-    const shared = getStoredSharedDetails();
-    return applySharedDetailsToDoc('medical', draft, shared);
-  });
-
-  const [lockupPsData, setLockupPsData] = useState(() => {
-    const draft = loadDocDraft('lockup_ps') || getDefaultLockupPsData();
-    const shared = getStoredSharedDetails();
-    return applySharedDetailsToDoc('lockup_ps', draft, shared);
-  });
-
-  const [lockupAcpData, setLockupAcpData] = useState(() => {
-    const draft = loadDocDraft('lockup_acp') || getDefaultLockupAcpData();
-    const shared = getStoredSharedDetails();
-    return applySharedDetailsToDoc('lockup_acp', draft, shared);
-  });
-
-  const [custodyTransferData, setCustodyTransferData] = useState(() => {
-    const draft = loadDocDraft('custody_transfer') || getDefaultCustodyTransferData();
-    const shared = getStoredSharedDetails();
-    return applySharedDetailsToDoc('custody_transfer', draft, shared);
-  });
-
-  const [arrestPermissionData, setArrestPermissionData] = useState(() => {
-    const draft = loadDocDraft('arrest_permission') || getDefaultArrestPermissionData();
-    const shared = getStoredSharedDetails();
-    return applySharedDetailsToDoc('arrest_permission', draft, shared);
-  });
+  // All other forms open empty by default
+  const [remandData, setRemandData] = useState(() => getDefaultRemandData());
+  const [medicalData, setMedicalData] = useState(() => getDefaultMedicalData());
+  const [lockupPsData, setLockupPsData] = useState(() => getDefaultLockupPsData());
+  const [lockupAcpData, setLockupAcpData] = useState(() => getDefaultLockupAcpData());
+  const [custodyTransferData, setCustodyTransferData] = useState(() => getDefaultCustodyTransferData());
+  const [arrestPermissionData, setArrestPermissionData] = useState(() => getDefaultArrestPermissionData());
+  const [notice352Data, setNotice352Data] = useState(() => getDefaultNotice352Data());
+  const [atakSanhaData, setAtakSanhaData] = useState(() => getDefaultAtakSanhaData());
+  const [notice47Data, setNotice47Data] = useState(() => getDefaultNotice47Data());
+  const [notice48Data, setNotice48Data] = useState(() => getDefaultNotice48Data());
 
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
@@ -111,28 +91,10 @@ export default function App() {
     }, 3200);
   };
 
-  // Auto-save drafts with debounce per document
-  const autoSaveTimerRef = useRef(null);
-  useEffect(() => {
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => {
-      if (activeDocId === 'form3') saveForm3Draft(form3Data);
-      else if (activeDocId === 'remand') saveDocDraft('remand', remandData);
-      else if (activeDocId === 'medical') saveDocDraft('medical', medicalData);
-      else if (activeDocId === 'lockup_ps') saveDocDraft('lockup_ps', lockupPsData);
-      else if (activeDocId === 'lockup_acp') saveDocDraft('lockup_acp', lockupAcpData);
-      else if (activeDocId === 'custody_transfer') saveDocDraft('custody_transfer', custodyTransferData);
-      else if (activeDocId === 'arrest_permission') saveDocDraft('arrest_permission', arrestPermissionData);
-    }, 500);
-    return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    };
-  }, [activeDocId, form3Data, remandData, medicalData, lockupPsData, lockupAcpData, custodyTransferData, arrestPermissionData]);
-
   /**
    * Share Details Action:
    * Collects all currently entered non-empty values from source form,
-   * stores them locally, and populates matching empty fields in all other forms.
+   * stores them in session pool, and populates matching empty fields in all other forms.
    * Preserves existing non-empty values in other forms.
    */
   const handleShareDetails = (sourceDocId, currentFormData) => {
@@ -149,49 +111,19 @@ export default function App() {
     saveStoredSharedDetails(updatedSharedPool);
 
     // Apply to all document forms (only fills empty fields, preserves existing non-empty data)
-    setForm3Data((prev) => {
-      const updated = sourceDocId === 'form3' ? currentFormData : applySharedDetailsToDoc('form3', prev, updatedSharedPool);
-      saveForm3Draft(updated);
-      return updated;
-    });
+    setForm3Data((prev) => (sourceDocId === 'form3' ? currentFormData : applySharedDetailsToDoc('form3', prev, updatedSharedPool)));
+    setRemandData((prev) => (sourceDocId === 'remand' ? currentFormData : applySharedDetailsToDoc('remand', prev, updatedSharedPool)));
+    setMedicalData((prev) => (sourceDocId === 'medical' ? currentFormData : applySharedDetailsToDoc('medical', prev, updatedSharedPool)));
+    setLockupPsData((prev) => (sourceDocId === 'lockup_ps' ? currentFormData : applySharedDetailsToDoc('lockup_ps', prev, updatedSharedPool)));
+    setLockupAcpData((prev) => (sourceDocId === 'lockup_acp' ? currentFormData : applySharedDetailsToDoc('lockup_acp', prev, updatedSharedPool)));
+    setCustodyTransferData((prev) => (sourceDocId === 'custody_transfer' ? currentFormData : applySharedDetailsToDoc('custody_transfer', prev, updatedSharedPool)));
+    setArrestPermissionData((prev) => (sourceDocId === 'arrest_permission' ? currentFormData : applySharedDetailsToDoc('arrest_permission', prev, updatedSharedPool)));
+    setNotice352Data((prev) => (sourceDocId === 'notice_35_2' ? currentFormData : applySharedDetailsToDoc('notice_35_2', prev, updatedSharedPool)));
+    setAtakSanhaData((prev) => (sourceDocId === 'atak_sanha' ? currentFormData : applySharedDetailsToDoc('atak_sanha', prev, updatedSharedPool)));
+    setNotice47Data((prev) => (sourceDocId === 'notice_47' ? currentFormData : applySharedDetailsToDoc('notice_47', prev, updatedSharedPool)));
+    setNotice48Data((prev) => (sourceDocId === 'notice_48' ? currentFormData : applySharedDetailsToDoc('notice_48', prev, updatedSharedPool)));
 
-    setRemandData((prev) => {
-      const updated = sourceDocId === 'remand' ? currentFormData : applySharedDetailsToDoc('remand', prev, updatedSharedPool);
-      saveDocDraft('remand', updated);
-      return updated;
-    });
-
-    setMedicalData((prev) => {
-      const updated = sourceDocId === 'medical' ? currentFormData : applySharedDetailsToDoc('medical', prev, updatedSharedPool);
-      saveDocDraft('medical', updated);
-      return updated;
-    });
-
-    setLockupPsData((prev) => {
-      const updated = sourceDocId === 'lockup_ps' ? currentFormData : applySharedDetailsToDoc('lockup_ps', prev, updatedSharedPool);
-      saveDocDraft('lockup_ps', updated);
-      return updated;
-    });
-
-    setLockupAcpData((prev) => {
-      const updated = sourceDocId === 'lockup_acp' ? currentFormData : applySharedDetailsToDoc('lockup_acp', prev, updatedSharedPool);
-      saveDocDraft('lockup_acp', updated);
-      return updated;
-    });
-
-    setCustodyTransferData((prev) => {
-      const updated = sourceDocId === 'custody_transfer' ? currentFormData : applySharedDetailsToDoc('custody_transfer', prev, updatedSharedPool);
-      saveDocDraft('custody_transfer', updated);
-      return updated;
-    });
-
-    setArrestPermissionData((prev) => {
-      const updated = sourceDocId === 'arrest_permission' ? currentFormData : applySharedDetailsToDoc('arrest_permission', prev, updatedSharedPool);
-      saveDocDraft('arrest_permission', updated);
-      return updated;
-    });
-
-    showToast(`Details shared! ${keyCount} field(s) available to all other forms. / माहिती इतर फॉर्ममध्ये उपलब्ध केली.`);
+    showToast(`Details shared! ${keyCount} field(s) available to other forms. / माहिती इतर फॉर्ममध्ये उपलब्ध केली.`);
   };
 
   // Fill sample data for active document
@@ -199,31 +131,36 @@ export default function App() {
     if (activeDocId === 'form3') {
       const s = getSampleForm3Data();
       setForm3Data(s);
-      saveForm3Draft(s);
     } else if (activeDocId === 'remand') {
       const s = getSampleRemandData();
       setRemandData(s);
-      saveDocDraft('remand', s);
     } else if (activeDocId === 'medical') {
       const s = getSampleMedicalData();
       setMedicalData(s);
-      saveDocDraft('medical', s);
     } else if (activeDocId === 'lockup_ps') {
       const s = getSampleLockupPsData();
       setLockupPsData(s);
-      saveDocDraft('lockup_ps', s);
     } else if (activeDocId === 'lockup_acp') {
       const s = getSampleLockupAcpData();
       setLockupAcpData(s);
-      saveDocDraft('lockup_acp', s);
     } else if (activeDocId === 'custody_transfer') {
       const s = getSampleCustodyTransferData();
       setCustodyTransferData(s);
-      saveDocDraft('custody_transfer', s);
     } else if (activeDocId === 'arrest_permission') {
       const s = getSampleArrestPermissionData();
       setArrestPermissionData(s);
-      saveDocDraft('arrest_permission', s);
+    } else if (activeDocId === 'notice_35_2') {
+      const s = getSampleNotice352Data();
+      setNotice352Data(s);
+    } else if (activeDocId === 'atak_sanha') {
+      const s = getSampleAtakSanhaData();
+      setAtakSanhaData(s);
+    } else if (activeDocId === 'notice_47') {
+      const s = getSampleNotice47Data();
+      setNotice47Data(s);
+    } else if (activeDocId === 'notice_48') {
+      const s = getSampleNotice48Data();
+      setNotice48Data(s);
     }
     showToast('Sample test data loaded successfully');
   };
@@ -238,6 +175,10 @@ export default function App() {
     else if (activeDocId === 'lockup_acp') dataToExport = lockupAcpData;
     else if (activeDocId === 'custody_transfer') dataToExport = custodyTransferData;
     else if (activeDocId === 'arrest_permission') dataToExport = arrestPermissionData;
+    else if (activeDocId === 'notice_35_2') dataToExport = notice352Data;
+    else if (activeDocId === 'atak_sanha') dataToExport = atakSanhaData;
+    else if (activeDocId === 'notice_47') dataToExport = notice47Data;
+    else if (activeDocId === 'notice_48') dataToExport = notice48Data;
 
     if (dataToExport) {
       exportDocDraftJson(activeDocId, dataToExport);
@@ -248,33 +189,37 @@ export default function App() {
   // Clear current document form
   const handleConfirmClear = () => {
     if (activeDocId === 'form3') {
-      clearForm3Draft();
       setForm3Data(getDefaultForm3Data());
     } else if (activeDocId === 'remand') {
-      clearDocDraft('remand');
       setRemandData(getDefaultRemandData());
     } else if (activeDocId === 'medical') {
-      clearDocDraft('medical');
       setMedicalData(getDefaultMedicalData());
     } else if (activeDocId === 'lockup_ps') {
-      clearDocDraft('lockup_ps');
       setLockupPsData(getDefaultLockupPsData());
     } else if (activeDocId === 'lockup_acp') {
-      clearDocDraft('lockup_acp');
       setLockupAcpData(getDefaultLockupAcpData());
     } else if (activeDocId === 'custody_transfer') {
-      clearDocDraft('custody_transfer');
       setCustodyTransferData(getDefaultCustodyTransferData());
     } else if (activeDocId === 'arrest_permission') {
-      clearDocDraft('arrest_permission');
       setArrestPermissionData(getDefaultArrestPermissionData());
+    } else if (activeDocId === 'notice_35_2') {
+      setNotice352Data(getDefaultNotice352Data());
+    } else if (activeDocId === 'atak_sanha') {
+      setAtakSanhaData(getDefaultAtakSanhaData());
+    } else if (activeDocId === 'notice_47') {
+      setNotice47Data(getDefaultNotice47Data());
+    } else if (activeDocId === 'notice_48') {
+      setNotice48Data(getDefaultNotice48Data());
     }
     setIsClearModalOpen(false);
     showToast('Form cleared successfully');
   };
 
+  const dashboardScrollPosRef = useRef(0);
+
   // When opening a document from dashboard, ensure any stored shared details populate empty fields
   const handleSelectDoc = (id) => {
+    dashboardScrollPosRef.current = window.scrollY || window.pageYOffset || 0;
     const shared = getStoredSharedDetails();
     if (Object.keys(shared).length > 0) {
       if (id === 'form3') setForm3Data((prev) => applySharedDetailsToDoc('form3', prev, shared));
@@ -284,9 +229,20 @@ export default function App() {
       else if (id === 'lockup_acp') setLockupAcpData((prev) => applySharedDetailsToDoc('lockup_acp', prev, shared));
       else if (id === 'custody_transfer') setCustodyTransferData((prev) => applySharedDetailsToDoc('custody_transfer', prev, shared));
       else if (id === 'arrest_permission') setArrestPermissionData((prev) => applySharedDetailsToDoc('arrest_permission', prev, shared));
+      else if (id === 'notice_35_2') setNotice352Data((prev) => applySharedDetailsToDoc('notice_35_2', prev, shared));
+      else if (id === 'atak_sanha') setAtakSanhaData((prev) => applySharedDetailsToDoc('atak_sanha', prev, shared));
+      else if (id === 'notice_47') setNotice47Data((prev) => applySharedDetailsToDoc('notice_47', prev, shared));
+      else if (id === 'notice_48') setNotice48Data((prev) => applySharedDetailsToDoc('notice_48', prev, shared));
     }
     setActiveDocId(id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  const handleBackToDashboard = () => {
+    setActiveDocId(null);
+    setTimeout(() => {
+      window.scrollTo({ top: dashboardScrollPosRef.current, behavior: 'smooth' });
+    }, 40);
   };
 
   const activeDocType = activeDocId ? getDocumentTypeById(activeDocId) : null;
@@ -295,7 +251,7 @@ export default function App() {
     <div className="app-root">
       <Header
         activeDocType={activeDocType}
-        onBackToDashboard={activeDocId ? () => setActiveDocId(null) : null}
+        onBackToDashboard={activeDocId ? handleBackToDashboard : null}
         onFillSample={activeDocId ? handleFillSample : null}
         onExportDraft={activeDocId ? handleExportDraft : null}
         onOpenClearModal={activeDocId ? () => setIsClearModalOpen(true) : null}
@@ -316,7 +272,7 @@ export default function App() {
           <div className="active-doc-view">
             <DocumentTopBar
               docType={activeDocType}
-              onBackToDashboard={() => setActiveDocId(null)}
+              onBackToDashboard={handleBackToDashboard}
               onFillSample={handleFillSample}
               onExportDraft={handleExportDraft}
               onOpenClearModal={() => setIsClearModalOpen(true)}
@@ -390,6 +346,46 @@ export default function App() {
                 onShareDetails={(data) => handleShareDetails('arrest_permission', data)}
               />
             )}
+
+            {activeDocId === 'notice_35_2' && (
+              <Notice352Form
+                formData={notice352Data}
+                setFormData={setNotice352Data}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('notice_35_2', data)}
+              />
+            )}
+
+            {activeDocId === 'atak_sanha' && (
+              <AtakSanhaForm
+                formData={atakSanhaData}
+                setFormData={setAtakSanhaData}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('atak_sanha', data)}
+              />
+            )}
+
+            {activeDocId === 'notice_47' && (
+              <Notice47Form
+                formData={notice47Data}
+                setFormData={setNotice47Data}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('notice_47', data)}
+              />
+            )}
+
+            {activeDocId === 'notice_48' && (
+              <Notice48Form
+                formData={notice48Data}
+                setFormData={setNotice48Data}
+                showToast={showToast}
+                docType={activeDocType}
+                onShareDetails={(data) => handleShareDetails('notice_48', data)}
+              />
+            )}
           </div>
         )}
       </main>
@@ -408,3 +404,4 @@ export default function App() {
     </div>
   );
 }
+

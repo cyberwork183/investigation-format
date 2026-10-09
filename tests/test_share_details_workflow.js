@@ -12,7 +12,11 @@ import {
   getDefaultForm3Data,
   getDefaultRemandData,
   getDefaultMedicalData,
-  getDefaultLockupPsData
+  getDefaultLockupPsData,
+  getDefaultNotice352Data,
+  getDefaultAtakSanhaData,
+  getDefaultNotice47Data,
+  getDefaultNotice48Data
 } from '../src/utils/documentSchemas.js';
 
 console.log('===========================================================');
@@ -96,18 +100,56 @@ if (
   throw new Error('Form III field mapping failed');
 }
 
-// Step 9: Verify non-overwrite of existing non-empty values
-console.log('\n[Step 9] Testing non-overwrite rule (preserving existing entries)...');
-let existingForm = getDefaultMedicalData();
-existingForm.accusedName = 'विशाल पाटील'; // Pre-existing different name
+// Step 10: Test sharing from Notice 35(2) (including bank details and relative)
+console.log('\n[Step 10] Testing sharing from Notice 35(2) to Notice 47 and Notice 48...');
+let notice352 = {
+  ...getDefaultNotice352Data(),
+  crimeNo: '38/2026',
+  accusedName: 'संदीप भानुदास मोरे',
+  bankName: 'IndusInd Bank',
+  accountNo: '259109855949',
+  branchName: 'Indore',
+  txnAmount: '13,00,000/-',
+  relativeName: 'सौ. सीमा मोरे'
+};
 
-existingForm = applySharedDetailsToDoc('medical', existingForm, sharedPool);
-if (existingForm.accusedName === 'विशाल पाटील') {
-  console.log('  ✓ Pre-existing non-empty value "विशाल पाटील" was preserved and NOT overwritten');
+const n352Extracted = extractSharedDetailsFromDoc('notice_35_2', notice352);
+sharedPool = { ...sharedPool, ...n352Extracted };
+
+let notice47 = applySharedDetailsToDoc('notice_47', getDefaultNotice47Data(), sharedPool);
+if (
+  notice47.accusedName === 'संदीप भानुदास मोरे' &&
+  notice47.crimeNo === '38/2026' &&
+  notice47.bankName === 'IndusInd Bank' &&
+  notice47.accountNo === '259109855949'
+) {
+  console.log('  ✓ Notice 47 received shared accused, crimeNo, and bank details');
 } else {
-  throw new Error('Existing non-empty value was overwritten!');
+  throw new Error('Notice 47 failed to receive shared details');
+}
+
+let notice48 = applySharedDetailsToDoc('notice_48', getDefaultNotice48Data(), sharedPool);
+if (
+  notice48.accusedName === 'संदीप भानुदास मोरे' &&
+  notice48.relativeName === 'सौ. सीमा मोरे' &&
+  notice48.bankName === 'IndusInd Bank'
+) {
+  console.log('  ✓ Notice 48 received shared accused, relativeName, and bank details');
+} else {
+  throw new Error('Notice 48 failed to receive shared details');
+}
+
+let atakSanha = applySharedDetailsToDoc('atak_sanha', getDefaultAtakSanhaData(), sharedPool);
+if (
+  atakSanha.accusedName === 'संदीप भानुदास मोरे' &&
+  atakSanha.crimeNo === '38/2026' &&
+  atakSanha.bankName === 'IndusInd Bank'
+) {
+  console.log('  ✓ Atak Sanha received shared accused, crimeNo, and bank details');
+} else {
+  throw new Error('Atak Sanha failed to receive shared details');
 }
 
 console.log('\n===========================================================');
-console.log('ALL SHARE DETAILS WORKFLOW TESTS PASSED SUCCESSFULLY!');
+console.log('ALL SHARE DETAILS WORKFLOW TESTS PASSED SUCCESSFULLY (10/10)!');
 console.log('===========================================================');

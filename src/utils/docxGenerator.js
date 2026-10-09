@@ -82,19 +82,25 @@ function setRunText(xmlDoc, runElem, text) {
 }
 
 function setCellText(xmlDoc, cellElem, text, bold = false, fontSize = '20') {
-  let p = cellElem.getElementsByTagNameNS(W_NS, 'p')[0];
-  if (!p) {
-    p = xmlDoc.createElementNS(W_NS, 'w:p');
-    cellElem.appendChild(p);
-  }
-  // Remove existing runs
-  const runs = Array.from(p.getElementsByTagNameNS(W_NS, 'r'));
-  runs.forEach(r => p.removeChild(r));
+  // Remove all existing paragraphs in cell to prevent vertical cell bloat
+  const allPs = Array.from(cellElem.getElementsByTagNameNS(W_NS, 'p'));
+  allPs.forEach(p => cellElem.removeChild(p));
+
+  const p = xmlDoc.createElementNS(W_NS, 'w:p');
+  const pPr = xmlDoc.createElementNS(W_NS, 'w:pPr');
+  const sp = xmlDoc.createElementNS(W_NS, 'w:spacing');
+  sp.setAttributeNS(W_NS, 'w:line', '192');
+  sp.setAttributeNS(W_NS, 'w:lineRule', 'auto');
+  sp.setAttributeNS(W_NS, 'w:before', '0');
+  sp.setAttributeNS(W_NS, 'w:after', '0');
+  pPr.appendChild(sp);
+  p.appendChild(pPr);
 
   if (text) {
     const newRun = createRun(xmlDoc, text, bold, fontSize);
     p.appendChild(newRun);
   }
+  cellElem.appendChild(p);
 }
 
 function createPhotoDrawingRun(xmlDoc, rId = 'rIdPhoto', cx = 1097280, cy = 1371600) {
@@ -545,12 +551,71 @@ export async function generateOfficialDocx(data, photoArrayBuffer = null) {
     });
   }
   if (data.place && elements[104]) {
-    const runsP104 = elements[104].getElementsByTagNameNS(W_NS, 'r');
-    if (runsP104.length >= 3) setRunText(xmlDoc, runsP104[2], ` ${data.place}`);
+    const runsP104 = Array.from(elements[104].getElementsByTagNameNS(W_NS, 'r'));
+    let replaced = false;
+    for (const r of runsP104) {
+      const t = r.getElementsByTagNameNS(W_NS, 't')[0];
+      if (t && (t.textContent.includes('पो. ठाणे') || t.textContent.includes('सायबर'))) {
+        t.textContent = data.place;
+        replaced = true;
+        break;
+      }
+    }
+    if (!replaced) {
+      elements[104].appendChild(createRun(xmlDoc, ` ${data.place}`, true));
+    }
   }
   if (data.finalDate && elements[105]) {
     elements[105].appendChild(createRun(xmlDoc, ` ${data.finalDate}`, true));
   }
+
+  // Clean up all cells in Physical Features Table to ensure single clean paragraph per cell
+  if (tbl && tbl.tagName.endsWith('tbl')) {
+    const allCells = Array.from(tbl.getElementsByTagNameNS(W_NS, 'tc'));
+    allCells.forEach(cell => {
+      const ps = Array.from(cell.getElementsByTagNameNS(W_NS, 'p'));
+      if (ps.length > 1) {
+        // Keep the first paragraph and remove extra empty paragraphs
+        for (let i = 1; i < ps.length; i++) {
+          if (!ps[i].textContent.trim()) {
+            cell.removeChild(ps[i]);
+          }
+        }
+      }
+    });
+  }
+
+  // Remove redundant placeholder paragraphs and forced page breaks that cause excessive white space
+  const elementsToRemove = [
+    elements[33], // empty address paragraph
+    elements[34], // empty address paragraph
+    elements[40], // forced dashed line with page-break
+    elements[60], // forced empty paragraph with page-break
+    elements[107] // trailing empty paragraph
+  ];
+
+  // Also remove redundant dashed witness lines if witness data is present
+  if (data.witness1Name || data.witness1Address) {
+    elementsToRemove.push(elements[93]);
+  }
+  if (data.witness2Name || data.witness2Address) {
+    elementsToRemove.push(elements[96]);
+  }
+
+  elementsToRemove.forEach(elem => {
+    if (elem && elem.parentNode) {
+      elem.parentNode.removeChild(elem);
+    }
+  });
+
+  // Remove any remaining forced page-break tags (<w:br w:type="page"/>) from the document
+  const allBrs = Array.from(xmlDoc.getElementsByTagNameNS(W_NS, 'br'));
+  allBrs.forEach(br => {
+    const type = br.getAttributeNS(W_NS, 'type') || br.getAttribute('w:type');
+    if (type === 'page' && br.parentNode) {
+      br.parentNode.removeChild(br);
+    }
+  });
 
   // Handle Accused Photo embedding
   if (photoArrayBuffer) {

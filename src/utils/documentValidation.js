@@ -106,6 +106,52 @@ export function validateArrestPermissionData(data) {
   };
 }
 
+export function validateNotice352Data(data) {
+  const errors = {};
+  if (!data.letterDate?.trim()) errors.letterDate = 'तारीख आवश्यक आहे / Date required';
+  if (!data.courtName?.trim()) errors.courtName = 'न्यायालय आवश्यक आहे / Court name required';
+  if (!data.crimeNo?.trim()) errors.crimeNo = 'अपराध क्रमांक आवश्यक आहे / Crime number required';
+  if (!data.accusedName?.trim()) errors.accusedName = 'आरोपीचे नाव आवश्यक आहे / Accused name required';
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+export function validateAtakSanhaData(data) {
+  const errors = {};
+  if (!data.letterDate?.trim()) errors.letterDate = 'तारीख आवश्यक आहे / Date required';
+  if (!data.crimeNo?.trim()) errors.crimeNo = 'अपराध क्रमांक आवश्यक आहे / Crime number required';
+  if (!data.accusedName?.trim()) errors.accusedName = 'आरोपीचे नाव आवश्यक आहे / Accused name required';
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+export function validateNotice47Data(data) {
+  const errors = {};
+  if (!data.letterDate?.trim()) errors.letterDate = 'तारीख आवश्यक आहे / Date required';
+  if (!data.crimeNo?.trim()) errors.crimeNo = 'अपराध क्रमांक आवश्यक आहे / Crime number required';
+  if (!data.accusedName?.trim()) errors.accusedName = 'आरोपीचे नाव आवश्यक आहे / Accused name required';
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+export function validateNotice48Data(data) {
+  const errors = {};
+  if (!data.letterDate?.trim()) errors.letterDate = 'तारीख आवश्यक आहे / Date required';
+  if (!data.crimeNo?.trim()) errors.crimeNo = 'अपराध क्रमांक आवश्यक आहे / Crime number required';
+  if (!data.accusedName?.trim()) errors.accusedName = 'आरोपीचे नाव आवश्यक आहे / Accused name required';
+  if (!data.relativeName?.trim()) errors.relativeName = 'नातेवाईकाचे नाव आवश्यक आहे / Relative name required';
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
 export function validateDocument(docId, data) {
   switch (docId) {
     case 'form3':
@@ -122,6 +168,14 @@ export function validateDocument(docId, data) {
       return validateCustodyTransferData(data);
     case 'arrest_permission':
       return validateArrestPermissionData(data);
+    case 'notice_35_2':
+      return validateNotice352Data(data);
+    case 'atak_sanha':
+      return validateAtakSanhaData(data);
+    case 'notice_47':
+      return validateNotice47Data(data);
+    case 'notice_48':
+      return validateNotice48Data(data);
     default:
       return { isValid: true, errors: {} };
   }

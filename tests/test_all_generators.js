@@ -6,13 +6,21 @@ import { generateLockupPsDocx } from '../src/utils/docxGenerators/generateLockup
 import { generateLockupAcpDocx } from '../src/utils/docxGenerators/generateLockupAcpDocx.js';
 import { generateCustodyTransferDocx } from '../src/utils/docxGenerators/generateCustodyTransferDocx.js';
 import { generateArrestPermissionDocx } from '../src/utils/docxGenerators/generateArrestPermissionDocx.js';
+import { generateNotice352Docx } from '../src/utils/docxGenerators/generateNotice352Docx.js';
+import { generateAtakSanhaDocx } from '../src/utils/docxGenerators/generateAtakSanhaDocx.js';
+import { generateNotice47Docx } from '../src/utils/docxGenerators/generateNotice47Docx.js';
+import { generateNotice48Docx } from '../src/utils/docxGenerators/generateNotice48Docx.js';
 import {
   getSampleRemandData,
   getSampleMedicalData,
   getSampleLockupPsData,
   getSampleLockupAcpData,
   getSampleCustodyTransferData,
-  getSampleArrestPermissionData
+  getSampleArrestPermissionData,
+  getSampleNotice352Data,
+  getSampleAtakSanhaData,
+  getSampleNotice47Data,
+  getSampleNotice48Data
 } from '../src/utils/documentSchemas.js';
 
 // Polyfill fetch for node testing using file read
@@ -43,14 +51,15 @@ async function testDocx(name, genFn, sampleData) {
     throw new Error(`${name}: document.xml is empty or too short!`);
   }
 
-  // Tag balancing check
-  const pCount = (docXml.match(/<w:p[\s>]/g) || []).length;
+  // Tag balancing check (account for self-closing <w:p .../>)
+  const allPTags = docXml.match(/<w:p(?:\s[^>]*)?>/g) || [];
+  const pOpenOnly = allPTags.filter(tag => !tag.endsWith('/>')).length;
   const pCloseCount = (docXml.match(/<\/w:p>/g) || []).length;
-  if (pCount !== pCloseCount) {
-    throw new Error(`${name}: Unbalanced w:p tags (${pCount} open vs ${pCloseCount} close)`);
+  if (pOpenOnly !== pCloseCount) {
+    throw new Error(`${name}: Unbalanced w:p tags (${pOpenOnly} open vs ${pCloseCount} close)`);
   }
 
-  console.log(`✓ ${name} passed! Generated ${nodeBuf.length} bytes, ${pCount} paragraphs.`);
+  console.log(`✓ ${name} passed! Generated ${nodeBuf.length} bytes, ${pOpenOnly} paragraphs.`);
 }
 
 async function run() {
@@ -60,9 +69,13 @@ async function run() {
   await testDocx('Lockup ACP Letter', generateLockupAcpDocx, getSampleLockupAcpData());
   await testDocx('Custody Transfer Letter', generateCustodyTransferDocx, getSampleCustodyTransferData());
   await testDocx('Arrest Permission Application', generateArrestPermissionDocx, getSampleArrestPermissionData());
-  console.log('\n=============================================');
-  console.log('ALL 6 NEW DOCUMENT GENERATORS TESTED & PASSED!');
-  console.log('=============================================');
+  await testDocx('Section 35(2) Notice Checklist', generateNotice352Docx, getSampleNotice352Data());
+  await testDocx('Arrest Sanha (Station Diary Entry)', generateAtakSanhaDocx, getSampleAtakSanhaData());
+  await testDocx('Section 47 Notice to Accused', generateNotice47Docx, getSampleNotice47Data());
+  await testDocx('Section 48 Notice to Relative', generateNotice48Docx, getSampleNotice48Data());
+  console.log('\n============================================================');
+  console.log('ALL 10 MODULAR DOCUMENT GENERATORS TESTED & PASSED (10/10)!');
+  console.log('============================================================');
 }
 
 run().catch(err => {

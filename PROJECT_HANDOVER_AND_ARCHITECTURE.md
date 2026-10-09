@@ -1,229 +1,224 @@
-# Multi-Document Police Document Generator
+# Multi-Document Police Investigation Document Generator
 ## Complete Project Handover, System Architecture & Developer Documentation
 
-> **Document Purpose**: This document provides an exhaustive, authoritative technical guide to the entire **Multi-Document Police Document Generator (पोलीस तपासणी दस्तऐवज प्रणाली)** project. Any developer or AI model continuing this work can read this document to understand the codebase, design principles, data models, document-generation engine, and deployment setup.
+> **Document Purpose**: This document serves as the authoritative, comprehensive technical manual and handover document for the **Multi-Document Police Investigation Document Generator (पोलीस तपासणी व कायदेशीर दस्तऐवज प्रणाली)**. Any engineer, maintainer, or AI system working on this codebase should refer to this document for understanding architecture, privacy guarantees, data flows, OpenXML document generation, and verification standards.
 
 ---
 
-## 1. Project Overview & Business Logic
+## 1. Executive Summary & Privacy Architecture
 
-### What is the Multi-Document Police Document Generator?
-In Indian law enforcement and criminal legal procedure (governed by the Bharatiya Nagarik Suraksha Sanhita (BNSS), Bharatiya Nyaya Sanhita (BNS), Information Technology Act, and State Police Acts), investigating police officers must prepare multiple statutory applications, panchanamas, and custody correspondence with strict formatting and precise legal details.
+### 🔒 100% In-Browser Execution & Zero Data Transmission Guarantee
 
-This web application provides a unified, institutional, 100% client-side platform to generate all official police investigation documents directly in Microsoft Word (`.docx`) format, ready for immediate printing, court submission, and hospital correspondence.
+This application was engineered with a strict **Local-First, Zero-Trust Privacy Guarantee** designed specifically for law enforcement compliance:
 
-### Supported Document Categories (4 Main Dashboard Categories)
+1. **All Computation Happens in the User's Browser**:
+   - **Form Rendering & State**: Fully managed in React client memory.
+   - **Photo Processing & Canvas Normalization**: Handled in-memory via HTML5 Canvas API.
+   - **OpenXML Parsing & Generation**: Performed entirely client-side using `JSZip` and DOMParser/XMLSerializer.
+   - **Document Download**: Triggered directly in the browser via standard Blob URL creation (`URL.createObjectURL`).
 
-The application dashboard is structured into **4 main intuitive document categories**:
+2. **No Data Stored on Server or Database**:
+   - There is **no backend server**, **no REST/GraphQL API**, **no cloud database (SQL/NoSQL)**, and **no remote file storage**.
+   - No sensitive information (such as Accused Name, Address, Phone Numbers, FIR/Crime Numbers, Medical History, Seized Property, Bank Account & UTR Details, or Police Officers' Identifiers) is ever stored outside the local browser session.
 
-1. **Arrest & Custody (अटक व पंचनामा)**:
-   - **Arrest / Court Surrender Form — Form III (अटकेचा पंचनामा)**: Full 17-section bilingual statutory memo with 25 physical features, property search, risk assessment, and embedded passport photograph.
-2. **Court Remand (न्यायालयीन कोठडी)**:
-   - **Police Custody Remand Application — PCR (पोलीस कोठडी रिमांड अर्ज)**: Official Marathi application for Magisterial court with bank transactions, crime brief, and remand prayer.
-3. **Court Permission (अटकेची परवानगी)**:
-   - **Permission to Arrest Application (अटकेची परवानगी मिळणेबाबत अर्ज)**: Official letter submitted to the learned Magistrate seeking formal custody and arrest permission.
-4. **Medical & Custody Letters (वैद्यकीय तपासणी व बंदीगृह पत्रे)**:
-   - **Medical Examination Request Letter (वैद्यकीय तपासणी अर्ज)**: Addressed to District Civil Surgeon / Medical Officer for pre/post-arrest medical fitness.
-   - **Lockup Placement Request (पोलीस ठाणे बंदीगृह विनंती पत्र)**: Letter to neighboring Police Station Senior Inspector requesting lockup space when local lockup is unavailable.
-   - **Lockup Placement Intimation (सहा. पोलीस आयुक्त माहिती पत्र)**: Intimation letter to the Assistant Commissioner of Police (ACP Crime).
-   - **Accused Custody Transfer / Release Request (आरोपी ताबा मिळणे पत्र)**: Official request to retrieve accused from another station's lockup for court presentation.
+3. **No Third-Party Transmission or Telemetry**:
+   - **Zero external API calls**: The application makes **zero network requests** to third-party endpoints or telemetry trackers.
+   - All master `.docx` templates are packaged directly inside the application bundle and embedded as Base64 strings in [`src/utils/allTemplatesBase64.js`](file:///c:/Project/Cyber-Cell/investigation-format/src/utils/allTemplatesBase64.js) for 100% offline capability.
 
----
-
-## 2. Core Architecture Principles
-
-1. **100% Client-Side Privacy & Offline Capability**:
-   - Zero server-side databases or backend APIs.
-   - All case data and photos reside strictly in the user's browser memory and local storage (`localStorage`).
-   - Master Word templates (`.docx`) are loaded via local fetch or embedded Base64 strings in [`src/utils/allTemplatesBase64.js`](file:///c:/Project/Api_sir_Work/investigation-format/src/utils/allTemplatesBase64.js) for 100% offline generation.
-2. **Master Design System Consistency**:
-   - All document forms follow the exact institutional layout, typography, section banners, card containers, input controls, and bilingual labels pioneered by the Form III master design.
-3. **High-Fidelity OpenXML DOCX Generation**:
-   - Does NOT use lossy HTML-to-Word converters.
-   - Manipulates the true WordprocessingML XML (`word/document.xml`) of official master templates using [JSZip](https://stuk.github.io/jszip/).
-   - Preserves all official police tables, borders, font metrics (Aparajita / Mangal / Times New Roman), court headers, and seals.
-4. **Zero-Friction "Share Details" Synchronizer**:
-   - Single "Share Details" button available on every form.
-   - Collects common fields (Police Station, Crime No., Year, Acts/Sections, Accused Name, Age, Address, Investigating Officer Name & Rank) into a shared profile.
-   - Automatically pre-populates matching fields across all other document forms.
+4. **Session-Only Memory & Reset Isolation**:
+   - Shared data across forms is held in transient browser memory and session storage (`sessionStorage`), which is immediately cleared when the user closes the browser or clicks the "नवीन फॉर्म / Clear" button.
 
 ---
 
-## 3. Technology Stack & Dependencies
+## 2. Supported Documents & Dashboard Organization
 
-| Layer | Technology | Version | Purpose |
-|:---|:---|:---|:---|
-| **Frontend Framework** | React | `^18.3.1` | Reactive UI, controlled form inputs, modular components |
-| **DOM Renderer** | React DOM | `^18.3.1` | Mounts React application into `#root` in `index.html` |
-| **Build Tool & Bundler** | Vite | `^6.0.1` | High-speed local dev server, production bundling with Rollup |
-| **Vite Plugin** | `@vitejs/plugin-react` | `^4.3.4` | Fast Refresh and JSX transformation |
-| **DOCX Packaging** | JSZip | `^3.10.1` | Browser-side unzipping and packing of OpenXML `.docx` files |
-| **Styling** | Vanilla CSS (`src/styles.css`) | Custom | Institutional design system, responsive grid, accessible theme |
-| **Deployment Target** | Vercel | Production | Static Jamstack deployment |
-
----
-
-## 4. Repository Structure
+The website supports **11 official statutory and investigation documents**, neatly arranged under **4 main dashboard categories**:
 
 ```
-c:\Project\Api_sir_Work\investigation-format\
-├── .gitignore                      # Excludes node_modules/, dist/, environment and log files
-├── index.html                      # Root HTML entry point
-├── package.json                    # Project metadata, dependencies, scripts
-├── package-lock.json               # Locked dependency tree
-├── PROJECT_HANDOVER_AND_ARCHITECTURE.md  # Comprehensive handover & architecture doc
-├── README.md                       # Quickstart guide
-├── start.bat                       # One-click Windows startup script (auto-opens browser)
-├── vercel.json                     # Vercel deployment configuration
-├── vite.config.js                  # Vite configuration file
+                                  [ MAIN DASHBOARD ]
+                                          │
+       ┌──────────────────┬───────────────┴───────────────┬──────────────────┐
+       ▼                  ▼                               ▼                  ▼
+┌──────────────┐   ┌──────────────┐               ┌──────────────┐   ┌──────────────┐
+│  Category 1  │   │  Category 2  │               │  Category 3  │   │  Category 4  │
+│  अटक व ताबा  │   │ पोलीस कोठडी  │               │ अटकेची       │   │  वैद्यकीय व  │
+│  (Arrest &   │   │ रिमांड (PCR) │               │ परवानगी      │   │ बंदीगृह पत्रे│
+│   Custody)   │   │              │               │(Permission)  │   │ (Med/Lockup) │
+└──────┬───────┘   └──────┬───────┘               └──────┬───────┘   └──────┬───────┘
+       │                  │                              │                  │
+       ├─ Form III        └─ Remand Application          └─ Permission      ├─ Medical Letter
+       ├─ Notice 35(2)       (११ कलमी गोषवारा)              to Arrest       ├─ Lockup Letter (PS)
+       ├─ Atak Sanha                                                        ├─ Lockup Letter (ACP)
+       ├─ Notice 47                                                         └─ Custody Transfer
+       └─ Notice 48
+```
+
+### Detailed Document Index
+
+| # | Document Name | Document ID | Category | Statutory Purpose |
+|---|---|---|---|---|
+| 1 | **Form III (Arrest Memo)** | `form3` | Arrest & Custody | Statutory 17-section arrest/surrender memo with 25 physical features and photo. |
+| 2 | **३५(२) नोटीस चेकलिस्ट** | `notice_35_2` | Arrest & Custody | BNSS Section 35(2) procedural compliance checklist for cognizable offenses. |
+| 3 | **अटक सान्हा** | `atak_sanha` | Arrest & Custody | Station diary general entry (Sanha) recording formal arrest. |
+| 4 | **४७ नोटीस** | `notice_47` | Arrest & Custody | Intimation notice under Section 47 BNSS with money trail and court production. |
+| 5 | **४८ नोटीस** | `notice_48` | Arrest & Custody | Statutory intimation notice under Section 48 BNSS. |
+| 6 | **पोलीस कोठडी रिमांड अर्ज** | `remand` | Police Custody Remand | Magisterial court remand application with 11-point table and investigation grounds. |
+| 7 | **अटकेची परवानगी अर्ज** | `arrest_permission` | Permission to Arrest | Application to the learned Magistrate seeking custody and arrest permission. |
+| 8 | **वैद्यकीय तपासणी अर्ज** | `medical` | Medical & Custody | Formal requisition to Civil Surgeon / Medical Officer for medical fitness examination. |
+| 9 | **बंदीगृह विनंती पत्र (PS)** | `lockup_ps` | Medical & Custody | Requisition to neighboring police station for accused lockup accommodation. |
+| 10 | **माहिती पत्र (ACP)** | `lockup_acp` | Medical & Custody | Official lockup placement intimation to the Assistant Commissioner of Police. |
+| 11 | **आरोपी ताबा मिळणे पत्र** | `custody_transfer` | Medical & Custody | Requisition to retrieve accused from another lockup for court presentation. |
+
+---
+
+## 3. Technology Stack
+
+| Component | Library / Tool | Version | Responsibility |
+|---|---|---|---|
+| **UI Framework** | React | `^18.3.1` | Declarative UI, state management, controlled multi-step wizards |
+| **DOM Renderer** | React DOM | `^18.3.1` | Mounting root tree in `index.html` |
+| **Bundler / Server** | Vite | `^6.0.1` | Lightning-fast development server, HMR, and Rollup production bundling |
+| **Babel/JSX Plugin** | `@vitejs/plugin-react` | `^4.3.4` | JSX compilation and React Fast Refresh |
+| **DOCX Engine** | JSZip | `^3.10.1` | In-memory ZIP archive reading and writing for `.docx` OpenXML packages |
+| **Styling** | Vanilla CSS | Custom | Institutional design system, responsive grid layout, accessible contrast |
+| **Hosting Platform** | Vercel | Production | Static Jamstack zero-configuration global CDN hosting |
+
+---
+
+## 4. Repository Structure & Key Files
+
+```
+c:\Project\Cyber-Cell\investigation-format\
+├── README.md                                 # User overview & quickstart
+├── PROJECT_HANDOVER_AND_ARCHITECTURE.md     # This comprehensive handover guide
+├── index.html                                # Main single-page entry point
+├── package.json                              # Project dependencies and npm scripts
+├── vite.config.js                            # Vite build and server config
+├── vercel.json                               # Vercel deployment routing config
+├── original_docx_templates/                  # Archived original source Word (.docx) templates
+│   ├── arrest form_templete.docx
+│   ├── medical letter 108-2025.docx
+│   ├── अटक सान्हा.docx
+│   ├── अटकेची परवानगी.docx
+│   ├── पोलीस कोठडी रिमांड.docx
+│   ├── ३५(२) नोटीस चेकलिस्ट.docx
+│   ├── ४७ नोटीस.docx
+│   └── ४८ नोटीस.docx
 │
-├── public/                         # Static assets served at root /
+├── public/                                   # Static assets
 │   ├── assets/
-│   │   └── emblem.svg              # Official state/police seal emblem icon
-│   └── template/                   # Master official Word templates
-│       ├── arrest-form-master.docx
-│       ├── arrest-permission-master.docx
-│       ├── custody-transfer-master.docx
-│       ├── lockup-placement-acp-master.docx
-│       ├── lockup-placement-ps-master.docx
-│       ├── medical-letter-master.docx
-│       ├── medical-pre-arrest-master.docx
-│       └── remand-application-master.docx
+│   │   └── emblem.svg                        # Maharashtra / Police emblem SVG
+│   └── template/                             # Master Word (.docx) templates
+│       ├── arrest-form-master.docx           # Form III Master Template
+│       ├── remand-application-master.docx    # PCR Remand Master Template
+│       ├── arrest-permission-master.docx     # Arrest Permission Master Template
+│       ├── medical-letter-master.docx        # Medical Examination Letter
+│       ├── lockup-placement-ps-master.docx   # Lockup Request PS
+│       ├── lockup-placement-acp-master.docx  # Lockup Intimation ACP
+│       ├── custody-transfer-master.docx      # Custody Transfer Request
+│       ├── notice-35-2-master.docx           # Notice 35(2) Checklist
+│       ├── atak-sanha-master.docx            # Atak Sanha Master Template
+│       ├── notice-47-master.docx             # Notice 47 Master Template
+│       └── notice-48-master.docx             # Notice 48 Master Template
 │
-├── src/                            # Application React source code
-│   ├── main.jsx                    # Application entry point (ReactDOM.createRoot)
-│   ├── App.jsx                     # Top-level state coordinator, router, and modal manager
-│   ├── styles.css                  # Institutional design system CSS
+├── src/                                      # Application Source Code
+│   ├── main.jsx                              # React root mounting
+│   ├── App.jsx                               # Top-level state coordinator, routing, and sharing handler
+│   ├── styles.css                            # Unified responsive CSS design system
 │   │
-│   ├── components/                 # UI components
-│   │   ├── Header.jsx              # Institutional header with logo, title, Home & Clear actions
-│   │   ├── DocumentDashboard.jsx   # 4-card document selector dashboard
-│   │   ├── StepNavigation.jsx      # Multi-step navigation sidebar for Form III
-│   │   ├── SecurityBanner.jsx      # Privacy & local processing banner
-│   │   ├── ClearModal.jsx          # Reset confirmation dialog
-│   │   ├── Toast.jsx               # Floating toast alert notification
+│   ├── components/                           # UI Components
+│   │   ├── Header.jsx                        # Institutional header with badge, navigation, and reset
+│   │   ├── Dashboard.jsx                     # 4-category responsive dashboard and document selector
+│   │   ├── StepNavigation.jsx                # Step indicator for multi-step wizards
+│   │   ├── SecurityBanner.jsx                # In-browser privacy and local processing badge
+│   │   ├── Toast.jsx                         # Floating notification toast
+│   │   ├── ClearModal.jsx                    # Session reset confirmation dialog
 │   │   │
-│   │   ├── forms/                  # Dedicated form screens for each document
-│   │   │   ├── Form3Wizard.jsx             # Form III full 8-step wizard
-│   │   │   ├── RemandForm.jsx              # Police Custody Remand (PCR) form
-│   │   │   ├── ArrestPermissionForm.jsx    # Permission to Arrest application form
-│   │   │   └── MedicalAndCustodyView.jsx   # Category 4 selector + sub-forms for Medical/Lockup letters
+│   │   ├── forms/                            # Dedicated document form components
+│   │   │   ├── Form3Wizard.jsx               # Form III 8-step wizard
+│   │   │   ├── RemandForm.jsx                # Remand 5-step application
+│   │   │   ├── ArrestPermissionForm.jsx      # Permission to Arrest form
+│   │   │   ├── MedicalLetterForm.jsx         # Medical Requisition form
+│   │   │   ├── LockupPsForm.jsx              # Lockup PS form
+│   │   │   ├── LockupAcpForm.jsx             # Lockup ACP form
+│   │   │   ├── CustodyTransferForm.jsx       # Custody Transfer form
+│   │   │   ├── Notice352Form.jsx             # Notice 35(2) Checklist form
+│   │   │   ├── AtakSanhaForm.jsx             # Atak Sanha form
+│   │   │   ├── Notice47Form.jsx              # Notice 47 form
+│   │   │   └── Notice48Form.jsx              # Notice 48 form
 │   │   │
-│   │   └── panels/                 # Form III 8-step wizard panels
-│   │       ├── Step1CaseInfo.jsx
-│   │       ├── Step2ArrestCourt.jsx
-│   │       ├── Step3ActsStatus.jsx
-│   │       ├── Step4AccusedParticulars.jsx
-│   │       ├── Step5PhysicalFeatures.jsx
-│   │       ├── Step6CustodyArticles.jsx
-│   │       ├── Step7SocioEconomic.jsx
-│   │       └── Step8WitnessesOfficerReview.jsx
+│   │   └── panels/                           # Form III specific section panels (Steps 1 to 8)
 │   │
-│   └── utils/                      # Core business logic and document generators
-│       ├── caseManager.js          # Cross-form Share Details synchronization engine
-│       ├── formData.js             # Form III data schema and defaults
-│       ├── validation.js           # Form validation rules
-│       ├── imageHandler.js         # Passport photo scaling, canvas conversion & ArrayBuffer builder
-│       ├── allTemplatesBase64.js   # Embedded Base64 strings of all 7 master templates
-│       ├── docxGenerator.js        # Form III OpenXML generator & photo injector
+│   └── utils/                                # Business logic and DOCX generators
+│       ├── shareDetails.js                   # Central Share Details mapping, extraction & non-overwrite merge
+│       ├── documentRegistry.js               # Metadata, category mapping, and default states for all 11 documents
+│       ├── documentValidation.js             # Validation rules for each document type
+│       ├── allTemplatesBase64.js             # Embedded Base64 strings of all 11 master templates (100% offline)
+│       ├── imageHandler.js                   # Accused photo canvas normalization & ArrayBuffer conversion
+│       ├── docxGenerator.js                  # Form III OpenXML builder
 │       │
-│       └── docxGenerators/         # Generator modules for all legal letters
-│           ├── commonDocxUtils.js              # XML escaping, namespace integrity, run/break replacer
-│           ├── generateRemandDocx.js           # PCR application generator
-│           ├── generateArrestPermissionDocx.js # Permission to arrest generator
-│           ├── generateMedicalDocx.js          # Medical examination letter generator
-│           ├── generateLockupPsDocx.js         # Lockup placement to PS generator
-│           ├── generateLockupAcpDocx.js        # Lockup placement to ACP generator
-│           └── generateCustodyTransferDocx.js  # Custody transfer/release generator
+│       └── docxGenerators/                   # Dedicated OpenXML generators for all other documents
+│           ├── commonDocxUtils.js            # Shared XML escaping, paragraph matching, and namespace integrity
+│           ├── generateRemandDocx.js
+│           ├── generateArrestPermissionDocx.js
+│           ├── generateMedicalDocx.js
+│           ├── generateLockupPsDocx.js
+│           ├── generateLockupAcpDocx.js
+│           ├── generateCustodyTransferDocx.js
+│           ├── generateNotice352Docx.js
+│           ├── generateAtakSanhaDocx.js
+│           ├── generateNotice47Docx.js
+│           ├── generateNotice48Docx.js
+│           └── index.js                      # Centralized DOCX generation and download dispatcher
 │
-└── tests/                          # Automated verification and XML regression test suite
-    ├── test_all_docx.cjs           # End-to-end XML validity test for all 7 generators
-    └── ...
+└── tests/                                    # Automated end-to-end verification suites
+    └── test_share_details_full_audit.cjs     # End-to-end CDP test for Share Details, isolation & conflict protection
 ```
 
 ---
 
-## 5. Share Details System Architecture
+## 5. Share Details Engine Architecture
 
-In [`src/utils/caseManager.js`](file:///c:/Project/Api_sir_Work/investigation-format/src/utils/caseManager.js):
-- **Storage Key**: `SHARED_CASE_PROFILE`.
-- **Functionality**:
-  - `saveSharedProfile(data)`: Extracts non-empty canonical fields (`policeStation`, `crimeNo`, `crimeYear`, `actsSections`, `accusedName`, `accusedAge`, `accusedAddress`, `accusedFather`, `accusedAlias`, `ioName`, `ioRank`, `ioStation`, `letterDate`) and persists them.
-  - `loadSharedProfile()`: Returns the latest shared dictionary.
-  - `populateFromShared(targetFormState)`: Merges shared profile values into the target form without overwriting existing non-empty unique fields.
-- **UI Interaction**:
-  - Every form includes a **"🔗 Share Details"** button alongside the Primary Generate/Download action. Clicking it syncs values immediately and displays a confirmation toast.
+The Share Details system is implemented in [`src/utils/shareDetails.js`](file:///c:/Project/Cyber-Cell/investigation-format/src/utils/shareDetails.js):
 
----
+### A. Bidirectional Data Flow
+1. When a user clicks **Share Details (माहिती शेअर करा)** in any form:
+   - `extractSharedDetailsFromDoc(docId, docData)` parses all non-empty fields into normalized keys.
+   - `applySharedDetailsToDoc(targetDocId, currentTargetData, sharedPool)` merges compatible values **only into empty fields** in all other 10 document forms.
+2. **Conflict / Non-Overwrite Protection**:
+   - If a target form already contains a non-empty value (e.g. customized address or specific letter date), it is **never silently overwritten**.
+3. **Partial Form Support**:
+   - Sharing operates regardless of whether a form is partially or fully filled.
 
-## 6. Official DOCX Generation Engine & OpenXML Integrity
-
-### XML Namespace Standard Compliance
-All generated documents adhere strictly to standard WordprocessingML schemas. The utility [`ensureXmlNamespaces`](file:///c:/Project/Api_sir_Work/investigation-format/src/utils/docxGenerators/commonDocxUtils.js) ensures the `<w:document>` root element contains all required namespace declarations:
-```xml
-<w:document 
-  xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" 
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" 
-  xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" 
-  xmlns:v="urn:schemas-microsoft-com:vml" 
-  xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" 
-  xmlns:w10="urn:schemas-microsoft-com:office:word" 
-  xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" 
-  xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
-  xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
-  xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml"
-  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
-```
-*This eliminates Microsoft Word startup errors ("Word experienced an error trying to open the file").*
-
-### High-Fidelity Replacement Strategy
-1. **Paragraph-Level Match & Replace**:
-   - `replaceParagraphTextByMatch(docXml, predicateOrSnippet, newText)` extracts `<w:pPr>` and `<w:rPr>` to preserve original font styles, weights, alignment, and spacing.
-   - Formats multi-line text cleanly with `<w:r>${rPr}<w:br/><w:t ...>` elements.
-2. **Passport Photo Embedding (Form III)**:
-   - In [`src/utils/imageHandler.js`](file:///c:/Project/Api_sir_Work/investigation-format/src/utils/imageHandler.js), photos are normalized onto a canvas (white background), resized to passport dimensions, and injected into `word/media/image1.png` with a DrawingML inline shape (`cx = 1097280`, `cy = 1371600` EMUs).
+### B. Shared Canonical Fields
+- **Case Information**: `crimeNo`, `policeStation`, `district`, `state`, `year`, `date`, `actsSections`, `courtName`.
+- **Accused Particulars**: `accusedName`, `accusedAge`, `accusedAddress`, `accusedFather`, `accusedAlias`, `arrestDate`, `arrestTime`, `arrestDateTime`.
+- **Investigating Officer**: `ioName`, `ioRank`, `ioStation`, `ioBeltNo`, `ioPhone`.
+- **Complainant Particulars**: `complainantName`, `complainantAge`, `complainantProfession`, `complainantAddress`, `caseBrief`.
+- **Financial & Money Trail**: `bankName`, `accountNo`, `branchName`, `txnId`, `txnAmount`, `accountName`, `accountAddress`, `companyName`, `directorsDetails`, `totalFraudAmount`.
+- **Relatives & Production**: `relativeName`, `relation`, `relativeAddress`, `relativePhone`, `relativeIntimation`, `productionWarrantDetails`, `producedFromJail`, `courtProductionDate`.
 
 ---
 
-## 7. How to Run, Build & Deploy
+## 6. OpenXML DOCX Generation & Layout Preservation
 
-### A. One-Click Launch (Windows)
-Double-click [`start.bat`](file:///c:/Project/Api_sir_Work/investigation-format/start.bat) in the project root. It will verify Node.js, install dependencies if missing, start Vite, and open `http://localhost:3000` automatically.
+### OpenXML Standards Compliance
+Official Marathi court and police documents require exact line-spacing, margins, Devanagari typography (`Mangal`, `Aparajita`), and borders. The generator operates directly on `word/document.xml`:
 
-### B. Command Line Operations
-```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Run automated DOCX XML validation suite
-node tests/test_all_docx.cjs
-
-# Build for production
-npm run build
-
-# Preview production build locally
-npm run preview
-```
-
-### C. Deploy to Vercel
-1. Push repository to GitHub: `https://github.com/cyberwork183/investigation-format.git`.
-2. Link project to [Vercel](https://vercel.com).
-3. Vercel automatically detects [`vercel.json`](file:///c:/Project/Api_sir_Work/investigation-format/vercel.json) and builds using `npm run build` outputting to `dist/`.
+1. **Namespace Guarantee**: [`ensureXmlNamespaces`](file:///c:/Project/Cyber-Cell/investigation-format/src/utils/docxGenerators/commonDocxUtils.js) verifies all standard WordprocessingML schemas (`w`, `r`, `m`, `v`, `wp`, `w10`, `a`, `pic`, `w14`, `w15`, `mc`) exist on `<w:document>`.
+2. **Style & Run Preservation**: `replaceParagraphTextByMatch` and `replaceTextInTable` preserve parent `<w:pPr>` (paragraph properties) and `<w:rPr>` (run properties).
+3. **Photo Embedding**: In Form III, photos are scaled onto an in-memory canvas, converted to PNG ArrayBuffer, and injected into `word/media/image1.png` referencing `rId` relationship.
 
 ---
 
-## 8. Golden Rules for Future Developers & AI Models
+## 7. Operational Guidelines for Future Developers & AI Assistants
 
-1. **DO NOT Replace OpenXML Engine with HTML-to-Word/PDF Converters**:
-   Court memos and police registers require pixel-perfect margins, official Devanagari typography, and specific legal layouts. Always manipulate the official master Word XML.
-2. **DO NOT Introduce a Server-Side Database**:
-   Police FIR and accused particulars are legally confidential. The entire application MUST remain 100% client-side.
-3. **Preserve Master Template Immutability**:
-   Always keep master template files in `public/template/` synchronized with their Base64 fallbacks in [`src/utils/allTemplatesBase64.js`](file:///c:/Project/Api_sir_Work/investigation-format/src/utils/allTemplatesBase64.js).
-4. **Maintain 4-Card Dashboard Hierarchy**:
-   Keep top-level navigation organized into the 4 core categories: (1) Arrest Form III, (2) Court Remand PCR, (3) Court Permission, (4) Medical & Custody Letters.
-5. **Always Run XML Validation Before Commits**:
-   Ensure `node tests/test_all_docx.cjs` and `npm run build` pass cleanly.
+1. **Never Add Server Storage or External Network APIs**:
+   All state, data extraction, and document generation must remain 100% inside the user's browser runtime.
+2. **Maintain OpenXML Template Integrity**:
+   Do not substitute `JSZip` OpenXML generation with HTML-to-PDF or HTML-to-Word libraries.
+3. **Preserve Bidirectional Field Sharing**:
+   When adding new fields or templates, register them in `src/utils/documentRegistry.js`, `src/utils/shareDetails.js`, and the corresponding generator in `src/utils/docxGenerators/`.
+4. **Run Verification Before Committing**:
+   - `node tests/test_share_details_full_audit.cjs`
+   - `npm run build`

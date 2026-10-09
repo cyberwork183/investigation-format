@@ -10,6 +10,10 @@ import { generateLockupPsDocx } from './generateLockupPsDocx.js';
 import { generateLockupAcpDocx } from './generateLockupAcpDocx.js';
 import { generateCustodyTransferDocx } from './generateCustodyTransferDocx.js';
 import { generateArrestPermissionDocx } from './generateArrestPermissionDocx.js';
+import { generateNotice352Docx } from './generateNotice352Docx.js';
+import { generateAtakSanhaDocx } from './generateAtakSanhaDocx.js';
+import { generateNotice47Docx } from './generateNotice47Docx.js';
+import { generateNotice48Docx } from './generateNotice48Docx.js';
 import { downloadBlob } from './commonDocxUtils.js';
 
 export {
@@ -21,6 +25,10 @@ export {
   generateLockupAcpDocx,
   generateCustodyTransferDocx,
   generateArrestPermissionDocx,
+  generateNotice352Docx,
+  generateAtakSanhaDocx,
+  generateNotice47Docx,
+  generateNotice48Docx,
   downloadBlob
 };
 
@@ -43,6 +51,14 @@ export async function generateDocumentDocx(docId, formData, extraData = {}) {
       return await generateCustodyTransferDocx(formData);
     case 'arrest_permission':
       return await generateArrestPermissionDocx(formData);
+    case 'notice_35_2':
+      return await generateNotice352Docx(formData);
+    case 'atak_sanha':
+      return await generateAtakSanhaDocx(formData);
+    case 'notice_47':
+      return await generateNotice47Docx(formData);
+    case 'notice_48':
+      return await generateNotice48Docx(formData);
     default:
       throw new Error(`Unknown document type: ${docId}`);
   }
@@ -78,6 +94,18 @@ export function downloadDocumentDocx(docId, blob, formData = {}) {
       break;
     case 'arrest_permission':
       filename = `Permission_To_Arrest_Application_${codeOrCrime}_${datePart}.docx`;
+      break;
+    case 'notice_35_2':
+      filename = `Notice_Checklist_35_2_${codeOrCrime}_${datePart}.docx`;
+      break;
+    case 'atak_sanha':
+      filename = `Atak_Sanha_Entry_${codeOrCrime}_${datePart}.docx`;
+      break;
+    case 'notice_47':
+      filename = `Notice_47_To_Accused_${codeOrCrime}_${datePart}.docx`;
+      break;
+    case 'notice_48':
+      filename = `Notice_48_To_Relative_${codeOrCrime}_${datePart}.docx`;
       break;
   }
 

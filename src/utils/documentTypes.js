@@ -18,6 +18,58 @@ export const DOCUMENT_TYPES = [
     icon: 'memo'
   },
   {
+    id: 'notice_35_2',
+    title: 'Section 35(2) BNSS Notice Checklist',
+    titleMr: '३५(२) नोटीस चेकलिस्ट (कलम ३५(१)(ब)(२) अन्वये)',
+    badge: 'Statutory Checklist',
+    badgeClass: 'badge-primary',
+    category: 'Arrest & Custody',
+    categoryMr: 'अटक व ताबा',
+    description: 'Statutory checklist submitted to Judicial Magistrate detailing grounds of arrest, bank fraud layer, and reasons under Section 35(1)(b)(2) BNSS.',
+    descriptionMr: 'भारतीय नागरिक सुरक्षा संहिता कलम ३५(१)(ब)(२) अन्वये आरोपीच्या अटकेचे आधार, बँक तपशील व अटकेची कारणे मा. न्यायालयाकडे सादर करण्याचे चेकलिस्ट पत्र.',
+    templateFile: '/template/notice-35-2-checklist-master.docx',
+    icon: 'memo'
+  },
+  {
+    id: 'atak_sanha',
+    title: 'Arrest Station Diary Entry (Atak Sanha)',
+    titleMr: 'अटक सान्हा (स्टेशन डायरी नोंद)',
+    badge: 'Station Diary Entry',
+    badgeClass: 'badge-secondary',
+    category: 'Arrest & Custody',
+    categoryMr: 'अटक व ताबा',
+    description: 'Official Station Diary (Sanha) arrest entry recording the IO statement, case brief, bank fraud details, and 11 grounds of arrest.',
+    descriptionMr: 'आरोपीच्या अटकेची अधिकृत स्टेशन डायरी (सान्हा) नोंद, ज्यामध्ये गुन्ह्याची पार्श्वभूमी, बँक खात्याचा तपशील, व अटकेची ११ कारणे नमूद केली जातात.',
+    templateFile: '/template/atak-sanha-master.docx',
+    icon: 'memo'
+  },
+  {
+    id: 'notice_47',
+    title: 'Section 47 BNSS Notice to Accused',
+    titleMr: '४७ नोटीस (कलम ४७ - आरोपीस अटकेची व जामीन हक्काची सूचना)',
+    badge: 'Statutory Notice',
+    badgeClass: 'badge-warning',
+    category: 'Arrest & Custody',
+    categoryMr: 'अटक व ताबा',
+    description: 'Official statutory notice served on the arrested accused intimating grounds of arrest, reasons, and right to apply for bail under Section 47 BNSS.',
+    descriptionMr: 'भारतीय नागरिक सुरक्षा संहिता कलम ४७ अन्वये अटक आरोपीला अटकेचे आधार, कारणे व जामीन अधिकाराबाबत दिली जाणारी अधिकृत लेखी सूचना.',
+    templateFile: '/template/notice-47-master.docx',
+    icon: 'memo'
+  },
+  {
+    id: 'notice_48',
+    title: 'Section 48 BNSS Notice to Relative / Friend',
+    titleMr: '४८ नोटीस (कलम ४८ - नातेवाईकास अटकेची व जामीन हक्काची सूचना)',
+    badge: 'Relative Intimation',
+    badgeClass: 'badge-info',
+    category: 'Arrest & Custody',
+    categoryMr: 'अटक व ताबा',
+    description: 'Official statutory notice served on the relative/friend of the arrested person informing them of arrest, grounds, and bail rights under Section 48 BNSS.',
+    descriptionMr: 'भारतीय नागरिक सुरक्षा संहिता कलम ४८ अन्वये अटक आरोपीच्या नातेवाईकास अटकेची माहिती, कारणे व जामीन अधिकाराबाबत दिली जाणारी अधिकृत सूचना.',
+    templateFile: '/template/notice-48-master.docx',
+    icon: 'memo'
+  },
+  {
     id: 'remand',
     title: 'Police Custody Remand Application (PCR)',
     titleMr: 'पोलीस कोठडी रिमांड अर्ज (PCR)',
@@ -102,18 +154,19 @@ export const DOCUMENT_TYPES = [
  */
 export const MAIN_DASHBOARD_CARDS = [
   {
-    id: 'form3',
-    cardKey: 'form3',
-    isDirectDoc: true,
-    title: 'Arrest / Court Surrender Form (Form III)',
-    titleMr: 'अटकेचा पंचनामा / न्यायालयाच्या स्वाधीन होण्याचा नमुना (फॉर्म ३)',
-    badge: 'Statutory Memo',
+    id: 'arrest_custody',
+    cardKey: 'arrest_custody',
+    isDirectDoc: false,
+    title: 'Arrest & Custody (Form III, Sanha & Notices)',
+    titleMr: 'अटक व ताबा (पंचनामा, सान्हा व वैधानिक नोटिसा)',
+    badge: '5 Templates',
     badgeClass: 'badge-primary',
     category: 'Arrest & Custody',
     categoryMr: 'अटक व ताबा',
-    description: 'Statutory 17-section arrest memo under CrPC/BNSS with accused photo, physical features, search of articles, and witnesses.',
-    descriptionMr: 'आरोपीचा फोटो, शारीरिक वैशिष्ट्ये, अंगझडती, सामाजिक-आर्थिक माहिती व पंचांच्या सह्यांसह १७ कलमी वैधानिक नमुना.',
-    icon: 'memo'
+    description: 'Statutory 17-section arrest memo Form III, BNSS 35(2) checklist, Atak Sanha entry, BNSS 47 notice to accused, and BNSS 48 notice to relative.',
+    descriptionMr: 'फॉर्म ३ अटकेचा पंचनामा, कलम ३५(२) चेकलिस्ट, अटक सान्हा नोंद, कलम ४७ आरोपीस नोटीस, व कलम ४८ नातेवाईकास नोटीस.',
+    icon: 'memo',
+    subDocIds: ['form3', 'notice_35_2', 'atak_sanha', 'notice_47', 'notice_48']
   },
   {
     id: 'remand',
@@ -160,6 +213,99 @@ export const MAIN_DASHBOARD_CARDS = [
   }
 ];
 
+/**
+ * 4 Main Organized Dashboard Sections for Continuous Single-Page Display
+ */
+export const DASHBOARD_CATEGORIES = [
+  {
+    id: 'arrest_custody',
+    category: 'Arrest & Custody',
+    categoryMr: 'अटक व ताबा',
+    titleMr: '१. अटक व ताबा दस्तऐवज',
+    titleEn: 'Arrest & Custody Documents (Form III, Sanha & Statutory Notices)',
+    descriptionMr: 'अटकेचा पंचनामा, कलम ३५(२) चेकलिस्ट, स्टेशन डायरी सान्हा व कलम ४७/४८ वैधानिक सूचना.',
+    badge: '५ दस्तऐवज / 5 Templates',
+    icon: 'memo',
+    docIds: ['form3', 'notice_35_2', 'atak_sanha', 'notice_47', 'notice_48']
+  },
+  {
+    id: 'court_remand',
+    category: 'Court Remand',
+    categoryMr: 'न्यायालयीन रिमांड',
+    titleMr: '२. पोलीस कोठडी रिमांड (PCR)',
+    titleEn: 'Police Custody Remand Application',
+    descriptionMr: '११ कलमी गोषवारा तक्ता व बँक लेयर तपासासह मा. न्यायालयाकडे पोलीस कोठडी मागणी अर्ज.',
+    badge: '१ अर्ज / 1 Application',
+    icon: 'gavel',
+    docIds: ['remand']
+  },
+  {
+    id: 'court_permission',
+    category: 'Court Permission',
+    categoryMr: 'न्यायालयीन परवानगी',
+    titleMr: '३. अटकेची परवानगी अर्ज',
+    titleEn: 'Permission to Arrest Application',
+    descriptionMr: 'इतर कारागृहातून प्रोडक्शन वॉरंटद्वारे हजर आरोपीस अटक करण्याची मा. न्यायालयासमक्ष परवानगी अर्ज.',
+    badge: '१ अर्ज / 1 Application',
+    icon: 'shield-check',
+    docIds: ['arrest_permission']
+  },
+  {
+    id: 'medical_custody',
+    category: 'Medical & Custody',
+    categoryMr: 'वैद्यकीय व बंदिगृह',
+    titleMr: '४. वैद्यकीय तपासणी व बंदिगृह (लॉकअप) पत्रे',
+    titleEn: 'Medical & Lockup Custody Requisition Letters',
+    descriptionMr: 'वैद्यकीय तपासणी विनंती, पोलीस ठाणे बंदीगृह मागणी, एसीपी माहिती पत्र व ताबा हस्तांतरण पत्रे.',
+    badge: '४ पत्रे / 4 Templates',
+    icon: 'folder-heart',
+    docIds: ['medical', 'lockup_ps', 'lockup_acp', 'custody_transfer']
+  }
+];
+
+export const ARREST_CUSTODY_DOCUMENTS = [
+  {
+    id: 'form3',
+    title: 'Arrest / Court Surrender Form — Form III',
+    titleMr: '१. अटकेचा पंचनामा (Form III - Arrest Memo)',
+    badge: 'Statutory Memo',
+    badgeClass: 'badge-primary',
+    descMr: 'आरोपीचा फोटो, शारीरिक वैशिष्ट्ये, अंगझडती, सामाजिक-आर्थिक माहिती व पंचांच्या सह्यांसह १७ कलमी वैधानिक नमुना.'
+  },
+  {
+    id: 'notice_35_2',
+    title: 'Section 35(2) BNSS Notice Checklist',
+    titleMr: '२. ३५(२) नोटीस चेकलिस्ट (Sec 35(2) BNSS Notice Checklist)',
+    badge: 'Checklist',
+    badgeClass: 'badge-primary',
+    descMr: 'भारतीय नागरिक सुरक्षा संहिता कलम ३५(१)(ब)(२) अन्वये आरोपीच्या अटकेचे आधार व कारणांबाबत मा. न्यायालयात सादर करावयाची चेकलिस्ट.'
+  },
+  {
+    id: 'atak_sanha',
+    title: 'Arrest Station Diary Entry (Atak Sanha)',
+    titleMr: '३. अटक सान्हा नोंद (Station Diary Arrest Sanha Entry)',
+    badge: 'Sanha Entry',
+    badgeClass: 'badge-secondary',
+    descMr: 'आरोपीच्या अटकेची पोलीस ठाणे स्टेशन डायरी (सान्हा) मधील अधिकृत नोंद व हकीकत.'
+  },
+  {
+    id: 'notice_47',
+    title: 'Section 47 BNSS Notice to Accused',
+    titleMr: '४. ४७ नोटीस - आरोपीस सूचना (Sec 47 Notice to Accused)',
+    badge: 'Accused Notice',
+    badgeClass: 'badge-warning',
+    descMr: 'भारतीय नागरिक सुरक्षा संहिता २०२३ कलम ४७ अन्वये आरोपीस अटकेची कारणे व जामीन हक्काबाबत दिली जाणारी लेखी सूचना.'
+  },
+  {
+    id: 'notice_48',
+    title: 'Section 48 BNSS Notice to Relative / Friend',
+    titleMr: '५. ४८ नोटीस - नातेवाईकास सूचना (Sec 48 Notice to Relative)',
+    badge: 'Relative Notice',
+    badgeClass: 'badge-info',
+    descMr: 'भारतीय नागरिक सुरक्षा संहिता २०२३ कलम ४८ अन्वये आरोपीच्या नातेवाईकास अटकेची माहिती व जामीन हक्काबाबत दिली जाणारी लेखी सूचना.'
+  }
+];
+
 export const MEDICAL_CUSTODY_LETTERS = [
   {
     id: 'medical',
@@ -198,3 +344,4 @@ export const MEDICAL_CUSTODY_LETTERS = [
 export function getDocumentTypeById(id) {
   return DOCUMENT_TYPES.find(d => d.id === id) || DOCUMENT_TYPES[0];
 }
+

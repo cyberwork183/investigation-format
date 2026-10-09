@@ -8,7 +8,11 @@ const {
   MEDICAL_TEMPLATE_BASE64,
   LOCKUP_PS_TEMPLATE_BASE64,
   LOCKUP_ACP_TEMPLATE_BASE64,
-  CUSTODY_TRANSFER_TEMPLATE_BASE64
+  CUSTODY_TRANSFER_TEMPLATE_BASE64,
+  NOTICE_35_2_TEMPLATE_BASE64,
+  ATAK_SANHA_TEMPLATE_BASE64,
+  NOTICE_47_TEMPLATE_BASE64,
+  NOTICE_48_TEMPLATE_BASE64
 } = require('../src/utils/allTemplatesBase64.js');
 
 function escapeXmlText(str) {
@@ -126,6 +130,10 @@ async function runAll() {
   await validateZip('Lockup Placement (PS)', LOCKUP_PS_TEMPLATE_BASE64, { 'पोलीस ठाणे सदर': 'पोलीस ठाणे सदर' });
   await validateZip('Lockup Placement (ACP)', LOCKUP_ACP_TEMPLATE_BASE64, { 'सहा. पोलीस आयुक्त': 'सहा. पोलीस आयुक्त' });
   await validateZip('Custody Transfer / Release', CUSTODY_TRANSFER_TEMPLATE_BASE64, { 'संदर्भ': 'संदर्भ - टेस्ट' });
+  await validateZip('Notice Checklist 35(2)', NOTICE_35_2_TEMPLATE_BASE64, { 'रिपोर्ट': 'रिपोर्ट - टेस्ट' });
+  await validateZip('Atak Sanha Entry', ATAK_SANHA_TEMPLATE_BASE64, { 'यावेळी': 'यावेळी आम्ही' });
+  await validateZip('Notice 47 to Accused', NOTICE_47_TEMPLATE_BASE64, { 'सूचना': 'सूचना' });
+  await validateZip('Notice 48 to Relative', NOTICE_48_TEMPLATE_BASE64, { 'सूचना': 'सूचना' });
 }
 
 runAll().catch(console.error);
