@@ -48,10 +48,26 @@ export function downloadBlob(blob, filename) {
 }
 
 /**
+ * Safely escape text for XML content
+ */
+export function escapeXmlText(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+
+/**
  * Ensure all standard WordprocessingML namespaces are present on <w:document>
  * This prevents Word "error trying to open file" caused by undeclared prefixes like w14:, w15:, mc:.
  */
 export function ensureXmlNamespaces(docXml) {
+
   if (!docXml || typeof docXml !== 'string') return docXml;
   return docXml.replace(/<w:document(\s[^>]*)?>/, (match, attrs = '') => {
     let newAttrs = attrs;
