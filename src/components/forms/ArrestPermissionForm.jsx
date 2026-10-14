@@ -5,6 +5,7 @@ import SharedOfficerFields from '../shared/SharedOfficerFields.jsx';
 import { validateArrestPermissionData } from '../../utils/documentValidation.js';
 import { generateArrestPermissionDocx } from '../../utils/docxGenerators/generateArrestPermissionDocx.js';
 import { downloadDocumentDocx } from '../../utils/docxGenerators/index.js';
+import { AdditionalAccusedList } from '../shared/SharedAccusedFields.jsx';
 
 const PERMISSION_STEPS = [
   { num: 1, label: 'Court & Header Details', marathi: 'न्यायालय व मथळा' },
@@ -268,6 +269,13 @@ export default function ArrestPermissionForm({
                   {errors.producedAccusedName && <span className="field-error">{errors.producedAccusedName}</span>}
                 </div>
 
+                <AdditionalAccusedList
+                  additionalAccused={formData.additionalAccused || []}
+                  onChange={(arr) => handleFieldChange('additionalAccused', arr)}
+                  showAlias={false}
+                  showFather={false}
+                />
+
                 <div className="form-group col-span-2">
                   <label className="form-label" htmlFor="producingAuthority">
                     Producing Escort / Prison Authority <span className="marathi-label">(हजर करणारी कारागृह संस्था)</span>
@@ -342,7 +350,7 @@ export default function ArrestPermissionForm({
                   <div><strong>Crime No:</strong> {formData.crimeNo || '—'}</div>
                   <div><strong>Produced Accused:</strong> {formData.producedAccusedName || '—'}</div>
                   <div><strong>Escort:</strong> {formData.producingAuthority || '—'}</div>
-                  <div><strong>Officer:</strong> {formData.ioName || '—'} ({formData.ioRank || 'वरीष्ठ पोलीस निरीक्षक'})</div>
+                  <div><strong>Officer:</strong> {formData.ioName || '—'} ({formData.ioRank || 'वरीष्ठ पोलीस निरीक्षक'}{formData.ioBuckleNo ? ', ' + formData.ioBuckleNo : ''})</div>
                 </div>
               </div>
 

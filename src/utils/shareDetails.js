@@ -89,7 +89,8 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     setIfVal('ioName', docData.officerName);
     setIfVal('ioRank', docData.officerRank);
     setIfVal('ioStation', docData.place);
-    setIfVal('ioBeltNo', docData.officerNo);
+    setIfVal('ioBeltNo', docData.officerNo || docData.ioBuckleNo);
+    setIfVal('ioBuckleNo', docData.officerNo || docData.ioBuckleNo);
     setIfVal('relativeName', docData.relativeIntimatedName || docData.witness1Name);
   } else {
     // Shared fields across Remand, Medical, Lockup, Permission, Notices, Sanha
@@ -107,6 +108,23 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     setIfVal('accusedAlias', docData.accusedAlias);
     setIfVal('accusedFather', docData.accusedFather);
 
+    if (docId !== 'form3' && docId !== 'notice_47' && docId !== 'notice_48') {
+      if (Array.isArray(docData.additionalAccused) && docData.additionalAccused.length > 0) {
+        const validAdditional = docData.additionalAccused
+          .filter((a) => a && typeof a.accusedName === 'string' && a.accusedName.trim() !== '')
+          .map((a) => ({
+            accusedName: a.accusedName.trim(),
+            accusedAlias: (a.accusedAlias || '').trim(),
+            accusedFather: (a.accusedFather || '').trim(),
+            accusedAge: (a.accusedAge || '').trim(),
+            accusedAddress: (a.accusedAddress || '').trim()
+          }));
+        if (validAdditional.length > 0) {
+          extracted.additionalAccused = validAdditional;
+        }
+      }
+    }
+
     // Arrest details
     setIfVal('arrestDate', docData.arrestDate);
     setIfVal('arrestTime', docData.arrestTime);
@@ -119,7 +137,8 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     setIfVal('ioName', docData.ioName || docData.officerName);
     setIfVal('ioRank', docData.ioRank || docData.officerRank);
     setIfVal('ioStation', docData.ioStation || docData.place);
-    setIfVal('ioBeltNo', docData.ioBeltNo || docData.officerNo);
+    setIfVal('ioBeltNo', docData.ioBuckleNo || docData.ioBeltNo || docData.officerNo);
+    setIfVal('ioBuckleNo', docData.ioBuckleNo || docData.ioBeltNo || docData.officerNo);
     setIfVal('ioPhone', docData.ioPhone);
 
     // Complainant details
@@ -128,8 +147,9 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     setIfVal('complainantProfession', docData.complainantProfession);
     setIfVal('complainantAddress', docData.complainantAddress);
 
-    // Case narration
-    setIfVal('caseBrief', docData.caseBrief);
+    // Case narration & grounds of arrest
+    setIfVal('caseBrief', docData.caseBrief || docData.briefFacts || docData.briefFactsOfCase);
+    setIfVal('groundsOfArrest', docData.groundsOfArrest || docData.reasonsForArrest);
 
     // Bank & Transaction details
     setIfVal('bankName', docData.bankName);
@@ -141,7 +161,7 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     setIfVal('accountAddress', docData.accountAddress || docData.bankAddress);
     setIfVal('companyName', docData.companyName);
     setIfVal('directorsDetails', docData.directorsDetails || docData.companyDirectors);
-    setIfVal('totalFraudAmount', docData.totalFraudAmount || docData.fraudAmount);
+    setIfVal('totalFraudAmount', docData.totalFraudAmount);
 
     // Array bank accounts support (Notice 35/2)
     if (docId === 'notice_35_2' && Array.isArray(docData.bankAccounts) && docData.bankAccounts.length > 0) {
@@ -308,6 +328,15 @@ export function applySharedDetailsToDoc(docId, targetDocData = {}, sharedPool = 
     }
   }
 
+  // Additional Accused (Strictly for multi-accused documents only)
+  if (docId !== 'form3' && docId !== 'notice_47' && docId !== 'notice_48') {
+    if (Array.isArray(sharedPool.additionalAccused) && sharedPool.additionalAccused.length > 0) {
+      if (!Array.isArray(updated.additionalAccused) || updated.additionalAccused.length === 0) {
+        updated.additionalAccused = sharedPool.additionalAccused.map((a) => ({ ...a }));
+      }
+    }
+  }
+
   // Arrest Date & Time
   if (sharedPool.arrestDate) {
     if (updated.arrestDate !== undefined && isEmpty(updated.arrestDate)) {
@@ -347,16 +376,29 @@ export function applySharedDetailsToDoc(docId, targetDocData = {}, sharedPool = 
   if (sharedPool.ioStation) {
     if (docId === 'form3') {
       if (isEmpty(updated.place)) updated.place = sharedPool.ioStation;
-    } else if (updated.ioStation !== undefined && isEmpty(updated.ioStation)) {
-      updated.ioStation = sharedPool.ioStation;
+    } else {
+      if (updated.ioStation !== undefined && isEmpty(updated.ioStation)) {
+        updated.ioStation = sharedPool.ioStation;
+      }
+      if (updated.policeStationHeader !== undefined && isEmpty(updated.policeStationHeader)) {
+        updated.policeStationHeader = sharedPool.ioStation;
+      }
     }
   }
 
-  if (sharedPool.ioBeltNo) {
+  const buckleVal = sharedPool.ioBuckleNo || sharedPool.ioBeltNo;
+  if (buckleVal) {
     if (docId === 'form3') {
-      if (isEmpty(updated.officerNo)) updated.officerNo = sharedPool.ioBeltNo;
-    } else if (updated.ioBeltNo !== undefined && isEmpty(updated.ioBeltNo)) {
-      updated.ioBeltNo = sharedPool.ioBeltNo;
+      if (isEmpty(updated.officerNo)) updated.officerNo = buckleVal;
+    } else {
+      if (updated.ioBuckleNo !== undefined && isEmpty(updated.ioBuckleNo)) {
+        updated.ioBuckleNo = buckleVal;
+      } else if (updated.ioBuckleNo === undefined && isEmpty(updated.ioBeltNo)) {
+        updated.ioBuckleNo = buckleVal;
+      }
+      if (updated.ioBeltNo !== undefined && isEmpty(updated.ioBeltNo)) {
+        updated.ioBeltNo = buckleVal;
+      }
     }
   }
 
@@ -378,9 +420,12 @@ export function applySharedDetailsToDoc(docId, targetDocData = {}, sharedPool = 
     updated.complainantAddress = sharedPool.complainantAddress;
   }
 
-  // Case narration
+  // Case narration & grounds of arrest
   if (sharedPool.caseBrief && updated.caseBrief !== undefined && isEmpty(updated.caseBrief)) {
     updated.caseBrief = sharedPool.caseBrief;
+  }
+  if (sharedPool.groundsOfArrest && updated.groundsOfArrest !== undefined && isEmpty(updated.groundsOfArrest)) {
+    updated.groundsOfArrest = sharedPool.groundsOfArrest;
   }
 
   // Bank details
@@ -419,7 +464,6 @@ export function applySharedDetailsToDoc(docId, targetDocData = {}, sharedPool = 
   }
   if (sharedPool.totalFraudAmount) {
     if (updated.totalFraudAmount !== undefined && isEmpty(updated.totalFraudAmount)) updated.totalFraudAmount = sharedPool.totalFraudAmount;
-    if (updated.fraudAmount !== undefined && isEmpty(updated.fraudAmount)) updated.fraudAmount = sharedPool.totalFraudAmount;
   }
 
   // Relative details

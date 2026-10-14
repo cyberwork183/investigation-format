@@ -28,14 +28,14 @@ export default function SharedOfficerFields({
       <div className="form-grid">
         <div className="form-group">
           <label className="form-label" htmlFor="ioName">
-            Officer Name <span className="marathi-label">(अधिकाऱ्याचे नाव)</span>
+            Officer Name <span className="marathi-label">(तपासी अधिकाऱ्याचे नाव)</span>
           </label>
           <input
             type="text"
             id="ioName"
             name="ioName"
             className="form-control"
-            placeholder="e.g., सुरेश डांबरे or सुधीर पाटील"
+            placeholder="उदा. तपासी अधिकाऱ्याचे नाव"
             value={formData.ioName || ''}
             onChange={(e) => onChange('ioName', e.target.value)}
           />
@@ -44,29 +44,44 @@ export default function SharedOfficerFields({
 
         <div className="form-group">
           <label className="form-label" htmlFor="ioRank">
-            Rank / Designation <span className="marathi-label">(पदनाम / हुद्दा)</span>
+            Rank / Designation <span className="marathi-label">(पदनाम)</span>
           </label>
           <input
             type="text"
             id="ioRank"
             name="ioRank"
             className="form-control"
-            placeholder="e.g., वरीष्ठ पोलीस निरीक्षक / पोलीस निरीक्षक"
+            placeholder="उदा. वरीष्ठ पोलीस निरीक्षक / पोलीस निरीक्षक"
             value={formData.ioRank || ''}
             onChange={(e) => onChange('ioRank', e.target.value)}
           />
         </div>
 
-        <div className="form-group col-span-2">
+        <div className="form-group">
+          <label className="form-label" htmlFor="ioBuckleNo">
+            Buckle / Identification Number <span className="marathi-label">(बक्कल क्रमांक)</span>
+          </label>
+          <input
+            type="text"
+            id="ioBuckleNo"
+            name="ioBuckleNo"
+            className="form-control"
+            placeholder="उदा. ब.क्र. ७८४५ / B-1234"
+            value={formData.ioBuckleNo || formData.ioBeltNo || formData.officerNo || ''}
+            onChange={(e) => onChange('ioBuckleNo', e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
           <label className="form-label" htmlFor="ioStation">
-            Police Station / Unit <span className="marathi-label">(पोलीस ठाणे / शाखा)</span>
+            Police Station <span className="marathi-label">(पोलीस ठाणे)</span>
           </label>
           <input
             type="text"
             id="ioStation"
             name="ioStation"
             className="form-control"
-            placeholder="e.g., पोलीस ठाणे सायबर, नागपूर शहर"
+            placeholder="उदा. पोलीस ठाणे सायबर, नागपूर शहर"
             value={formData.ioStation || ''}
             onChange={(e) => onChange('ioStation', e.target.value)}
           />

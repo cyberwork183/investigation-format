@@ -284,7 +284,7 @@ export default function CustodyTransferForm({
                   <div><strong>Requesting Station:</strong> {formData.sendingStation || '—'}</div>
                   <div><strong>Crime No:</strong> {formData.crimeNo || '—'}</div>
                   <div><strong>Accused:</strong> {formData.accusedName || '—'} {formData.accusedAlias ? `(${formData.accusedAlias})` : ''}</div>
-                  <div><strong>Officer:</strong> {formData.ioName || '—'} ({formData.ioRank || 'पोलीस निरीक्षक'})</div>
+                  <div><strong>Officer:</strong> {formData.ioName || '—'} ({formData.ioRank || 'पोलीस निरीक्षक'}{formData.ioBuckleNo ? ', ' + formData.ioBuckleNo : ''})</div>
                 </div>
               </div>
 

@@ -283,7 +283,16 @@ export function getSampleFormData() {
 
 export function saveDraftToLocalStorage(data) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const dataToSave = { ...data };
+    const officerData = {};
+    ['officerName', 'officerRank', 'officerNo', 'place'].forEach((k) => {
+      if (dataToSave[k] !== undefined) {
+        officerData[k] = dataToSave[k];
+        delete dataToSave[k];
+      }
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    sessionStorage.setItem('SESSION_FORM3_OFFICER', JSON.stringify(officerData));
   } catch (e) {
     console.error('Failed to save draft to localStorage:', e);
   }
@@ -293,7 +302,20 @@ export function loadDraftFromLocalStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // Ensure user-entered officer details are never restored from permanent localStorage in new sessions
+      delete parsed.officerName;
+      delete parsed.officerRank;
+      delete parsed.officerNo;
+      delete parsed.place;
+
+      try {
+        const sessionRaw = sessionStorage.getItem('SESSION_FORM3_OFFICER');
+        if (sessionRaw) {
+          Object.assign(parsed, JSON.parse(sessionRaw));
+        }
+      } catch (err) {}
+      return parsed;
     }
   } catch (e) {
     console.error('Failed to load draft from localStorage:', e);
@@ -304,6 +326,7 @@ export function loadDraftFromLocalStorage() {
 export function clearDraftFromLocalStorage() {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem('SESSION_FORM3_OFFICER');
   } catch (e) {
     console.error('Failed to clear draft:', e);
   }

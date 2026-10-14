@@ -4,7 +4,15 @@
  */
 
 import JSZip from 'jszip';
-import { loadTemplateBuffer, replaceParagraphTextByMatch, ensureXmlNamespaces } from './commonDocxUtils.js';
+import {
+  loadTemplateBuffer,
+  replaceParagraphTextByMatch,
+  ensureXmlNamespaces,
+  updateStandardOfficerSignature,
+  getAllAccusedList,
+  formatSingleAccused,
+  formatAllAccusedListText
+} from './commonDocxUtils.js';
 import { LOCKUP_ACP_TEMPLATE_BASE64 } from '../allTemplatesBase64.js';
 
 export async function generateLockupAcpDocx(formData) {
@@ -17,11 +25,21 @@ export async function generateLockupAcpDocx(formData) {
   let docXml = await zip.file('word/document.xml').async('text');
 
   const letterDateStr = formData.letterDate || '२८-०३-२०२६';
-  const aliasPart = formData.accusedAlias ? ` उर्फ ${formData.accusedAlias}` : '';
-  const fatherPart = formData.accusedFather ? ` पिता ${formData.accusedFather}` : '';
-  const agePart = formData.accusedAge ? ` वय ${formData.accusedAge} वर्षे` : '';
-  const addressPart = formData.accusedAddress ? `, पत्ता – ${formData.accusedAddress}` : '';
-  const accusedFull = `उपरोक्त विषय सादर आहे की, ${formData.sendingStation || 'पोलीस ठाणे सायबर, नागपूर शहर'} अपराध क्रमांक ${formData.crimeNo || '108/2025'} कलम ${formData.actsSections || '318(2) BNS'} मध्ये आरोपी नामे ${formData.accusedName || 'प्रेमसुख'}${aliasPart}${fatherPart}${agePart}${addressPart} याला अटक केलेले असुन नमुद आरोपी सध्या पोलीस कोठडीत आहे.`;
+  const accusedList = getAllAccusedList(formData);
+  if (accusedList.length === 0) {
+    accusedList.push({
+      accusedName: 'प्रेमसुख',
+      accusedAlias: 'प्रेम',
+      accusedFather: 'भाकरराम बिष्णोई',
+      accusedAge: '२०',
+      accusedAddress: 'जंबेश्वर नगरी, मोटाई, पोलीस ठाणे चाखु, जिल्हा फलोदी, राजस्थान'
+    });
+  }
+
+  const isMulti = accusedList.length > 1;
+  const accusedFull = isMulti
+    ? `उपरोक्त विषय सादर आहे की, ${formData.sendingStation || 'पोलीस ठाणे सायबर, नागपूर शहर'} अपराध क्रमांक ${formData.crimeNo || '108/2025'} कलम ${formData.actsSections || '318(2) BNS'} मध्ये आरोपी नामे\n${formatAllAccusedListText(accusedList, { includeNumberForSingle: true })}\nयांना अटक केलेले असुन नमुद आरोपी सध्या पोलीस कोठडीत आहेत.`
+    : `उपरोक्त विषय सादर आहे की, ${formData.sendingStation || 'पोलीस ठाणे सायबर, नागपूर शहर'} अपराध क्रमांक ${formData.crimeNo || '108/2025'} कलम ${formData.actsSections || '318(2) BNS'} मध्ये आरोपी नामे ${formatSingleAccused(accusedList[0])} याला अटक केलेले असुन नमुद आरोपी सध्या पोलीस कोठडीत आहे.`;
   const refFull = `संदर्भ - ${formData.sendingStation || 'पोलीस ठाणे सायबर, नागपुर शहर'} अपराध क्रमांक ${formData.crimeNo || '108/2025'} कलम ${formData.actsSections || '318(2) BNS'}`;
 
   docXml = replaceParagraphTextByMatch(docXml, (t) => t.startsWith('दिनांक') || (t.includes('दिनांक') && !t.includes('सादर')), `दिनांक ${letterDateStr}`);
@@ -32,7 +50,9 @@ export async function generateLockupAcpDocx(formData) {
   if (formData.reasonText?.trim()) {
     docXml = replaceParagraphTextByMatch(docXml, (t) => t.includes('बंदीगृह (लॉकअप) नसल्याने') || t.includes('बंदिगृहात (लॉकअपमध्ये)'), formData.reasonText);
   }
-  docXml = replaceParagraphTextByMatch(docXml, (t) => t.trim() === 'पोलीस ठाणे सायबर नागपूर शहर' || t.trim() === 'पोलीस ठाणे सायबर, नागपुर शहर', formData.ioStation || formData.sendingStation || 'पोलीस ठाणे सायबर नागपूर शहर');
+
+  // Dynamically populate Officer details in signature block (Name, Rank, Buckle No, Station)
+  docXml = updateStandardOfficerSignature(docXml, formData);
 
   docXml = ensureXmlNamespaces(docXml);
   zip.file('word/document.xml', docXml);

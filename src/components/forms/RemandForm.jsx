@@ -3,12 +3,13 @@ import StepNavigation from '../StepNavigation';
 import { validateRemandData } from '../../utils/documentValidation.js';
 import { generateRemandDocx } from '../../utils/docxGenerators/generateRemandDocx.js';
 import { downloadDocumentDocx } from '../../utils/docxGenerators/index.js';
+import { AdditionalAccusedList } from '../shared/SharedAccusedFields.jsx';
 
 const REMAND_STEPS = [
   { num: 1, label: 'Court & Application Header', marathi: 'न्यायालय व मथळा तपशील' },
   { num: 2, label: '11-Point Summary Table', marathi: '११ कलमी गोषवारा तक्ता' },
-  { num: 3, label: 'Case Brief & Bank Trail', marathi: 'हकीकत व बँक लेयर तपशील' },
-  { num: 4, label: 'Grounds & Investigation', marathi: 'अटकेची व तपासाची कारणे' },
+  { num: 3, label: 'Facts & Grounds of Arrest', marathi: 'हकीकत व अटकेची कारणे' },
+  { num: 4, label: 'Investigation Points', marathi: 'तपास मुद्दे व इतर तपशील' },
   { num: 5, label: 'Review & Download', marathi: 'पुनरावलोकन व डाऊनलोड' }
 ];
 
@@ -34,18 +35,24 @@ export default function RemandForm({
     }
   };
 
-  const handleGroundChange = (index, value) => {
-    setFormData((prev) => {
-      const grounds = [...(prev.arrestGrounds || [])];
-      grounds[index] = value;
-      return { ...prev, arrestGrounds: grounds };
-    });
-  };
-
   const handleInvestigationPointChange = (index, value) => {
     setFormData((prev) => {
       const points = [...(prev.remainingInvestigationPoints || [])];
       points[index] = value;
+      return { ...prev, remainingInvestigationPoints: points };
+    });
+  };
+
+  const handleAddInvestigationPoint = () => {
+    setFormData((prev) => ({
+      ...prev,
+      remainingInvestigationPoints: [...(prev.remainingInvestigationPoints || []), '']
+    }));
+  };
+
+  const handleRemoveInvestigationPoint = (index) => {
+    setFormData((prev) => {
+      const points = (prev.remainingInvestigationPoints || []).filter((_, i) => i !== index);
       return { ...prev, remainingInvestigationPoints: points };
     });
   };
@@ -207,8 +214,8 @@ export default function RemandForm({
 
                 <div className="form-group">
                   <label className="form-label" htmlFor="remand-io-name">
-                    Investigating Officer Name{' '}
-                    <span className="marathi-label">(तपासी अंमलदाराचे नाव)</span>{' '}
+                    Officer Name{' '}
+                    <span className="marathi-label">(तपासी अधिकाऱ्याचे नाव)</span>{' '}
                     <span className="req">*</span>
                   </label>
                   <input
@@ -217,7 +224,7 @@ export default function RemandForm({
                     className={`form-control ${errors.ioName ? 'is-invalid' : ''}`}
                     value={formData.ioName || ''}
                     onChange={(e) => handleFieldChange('ioName', e.target.value)}
-                    placeholder="उदा. सुरेश डांबरे"
+                    placeholder="उदा. तपासी अधिकाऱ्याचे नाव"
                   />
                   {errors.ioName && (
                     <span className="field-error">{errors.ioName}</span>
@@ -227,7 +234,7 @@ export default function RemandForm({
                 <div className="form-group">
                   <label className="form-label" htmlFor="remand-io-rank">
                     Rank / Designation{' '}
-                    <span className="marathi-label">(हुद्दा / पदनाम)</span>
+                    <span className="marathi-label">(पदनाम)</span>
                   </label>
                   <input
                     id="remand-io-rank"
@@ -239,10 +246,25 @@ export default function RemandForm({
                   />
                 </div>
 
-                <div className="form-group span-2">
+                <div className="form-group">
+                  <label className="form-label" htmlFor="remand-io-buckle">
+                    Buckle / Identification Number{' '}
+                    <span className="marathi-label">(बक्कल क्रमांक)</span>
+                  </label>
+                  <input
+                    id="remand-io-buckle"
+                    type="text"
+                    className="form-control"
+                    value={formData.ioBuckleNo || formData.ioBeltNo || formData.officerNo || ''}
+                    onChange={(e) => handleFieldChange('ioBuckleNo', e.target.value)}
+                    placeholder="उदा. ब.क्र. ७८४५ / B-1234"
+                  />
+                </div>
+
+                <div className="form-group">
                   <label className="form-label" htmlFor="remand-io-station">
-                    IO Police Station{' '}
-                    <span className="marathi-label">(तपासी अधिकाऱ्याचे ठाणे)</span>
+                    Police Station{' '}
+                    <span className="marathi-label">(पोलीस ठाणे)</span>
                   </label>
                   <input
                     id="remand-io-station"
@@ -461,39 +483,16 @@ export default function RemandForm({
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="remand-fraud-amt">
-                    (07) Defrauded Amount{' '}
-                    <span className="marathi-label">(फसवणुक झालेली रक्कम)</span>
-                  </label>
-                  <input
-                    id="remand-fraud-amt"
-                    type="text"
-                    className="form-control"
-                    value={formData.fraudAmount || ''}
-                    onChange={(e) => handleFieldChange('fraudAmount', e.target.value)}
-                    placeholder="उदा. रु. 13,00,100/-"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="remand-refund-amt">
-                    (08) Refunded Amount{' '}
-                    <span className="marathi-label">(फिर्यादीस परत मिळालेली रक्कम)</span>
-                  </label>
-                  <input
-                    id="remand-refund-amt"
-                    type="text"
-                    className="form-control"
-                    value={formData.refundedAmount || ''}
-                    onChange={(e) => handleFieldChange('refundedAmount', e.target.value)}
-                    placeholder="उदा. रु. 13,00,000/-"
-                  />
-                </div>
+                <AdditionalAccusedList
+                  additionalAccused={formData.additionalAccused || []}
+                  onChange={(arr) => handleFieldChange('additionalAccused', arr)}
+                  showAlias={false}
+                  showFather={false}
+                />
 
                 <div className="form-group span-2">
                   <label className="form-label" htmlFor="remand-crime-scene">
-                    (09) Crime Scene / Place of Offense{' '}
+                    (07) Crime Scene / Place of Offense{' '}
                     <span className="marathi-label">(घटनास्थळ)</span>
                   </label>
                   <input
@@ -508,7 +507,7 @@ export default function RemandForm({
 
                 <div className="form-group">
                   <label className="form-label" htmlFor="remand-inc-dt">
-                    (10) Incident Date & Time{' '}
+                    (08) Incident Date & Time{' '}
                     <span className="marathi-label">(घटना घडली तारीख व वेळ)</span>
                   </label>
                   <input
@@ -523,7 +522,7 @@ export default function RemandForm({
 
                 <div className="form-group">
                   <label className="form-label" htmlFor="remand-filing-dt">
-                    (11) Filing Date & Time{' '}
+                    (09) Filing Date & Time{' '}
                     <span className="marathi-label">(दाखल तारीख व वेळ)</span>
                   </label>
                   <input
@@ -550,170 +549,55 @@ export default function RemandForm({
                   className="btn btn-primary"
                   onClick={() => handleGoToStep(3)}
                 >
-                  Next: Case Brief & Bank Trail &rarr;
+                  Next: Facts, Grounds &amp; Reasons &rarr;
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: BRIEF & BANK DETAILS */}
+          {/* STEP 3: FACTS & GROUNDS OF ARREST */}
           {currentStep === 3 && (
             <div className="section-panel active">
               <div className="panel-header">
                 <h2>
-                  Section 3 — Case Brief & Bank Trail{' '}
-                  <span className="marathi-header">(गुन्ह्याची हकीकत व बँक लेयर तपशील)</span>
+                  Section 3 — Brief Facts &amp; Grounds of Arrest{' '}
+                  <span className="marathi-header">(गुन्ह्याची हकीकत व अटकेची कारणे)</span>
                 </h2>
-                <p>Provide narrative details of the cyber fraud, beneficiary bank accounts, and transactions.</p>
+                <p>Record the factual summary of the case and the grounds of arrest.</p>
               </div>
 
               <div className="form-grid">
+                {/* A. Brief Facts of the Case */}
                 <div className="form-group span-2">
                   <label className="form-label" htmlFor="remand-case-brief">
-                    Brief Narrative of Complaint{' '}
-                    <span className="marathi-label">(गुन्ह्यातील फिर्याद थोडक्यात हकीकत)</span>
+                    Brief Facts of the Case{' '}
+                    <span className="marathi-label">(गुन्ह्याची थोडक्यात हकीकत)</span>
                   </label>
                   <textarea
                     id="remand-case-brief"
+                    name="caseBrief"
                     rows={4}
                     className="form-control"
                     value={formData.caseBrief || ''}
                     onChange={(e) => handleFieldChange('caseBrief', e.target.value)}
-                    placeholder="डिजिटल अरेस्ट, बनावट वॉरंट किंवा इतर फसवणुकीची थोडक्यात हकीकत..."
+                    placeholder="गुन्ह्याची थोडक्यात हकीकत (तक्रारदार, घटना, फसवणूक पद्धत इत्यादी)..."
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="remand-bank-layer">
-                    Bank Layer Number{' '}
-                    <span className="marathi-label">(बँक लेयर क्रमांक)</span>
-                  </label>
-                  <input
-                    id="remand-bank-layer"
-                    type="text"
-                    className="form-control"
-                    value={formData.bankLayer || '1'}
-                    onChange={(e) => handleFieldChange('bankLayer', e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="remand-bank-name">
-                    Bank Name{' '}
-                    <span className="marathi-label">(बँकेचे नाव)</span>
-                  </label>
-                  <input
-                    id="remand-bank-name"
-                    type="text"
-                    className="form-control"
-                    value={formData.bankName || ''}
-                    onChange={(e) => handleFieldChange('bankName', e.target.value)}
-                    placeholder="उदा. IndusInd Bank"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="remand-bank-branch">
-                    Branch{' '}
-                    <span className="marathi-label">(शाखा)</span>
-                  </label>
-                  <input
-                    id="remand-bank-branch"
-                    type="text"
-                    className="form-control"
-                    value={formData.bankBranch || ''}
-                    onChange={(e) => handleFieldChange('bankBranch', e.target.value)}
-                    placeholder="उदा. Indore"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="remand-bank-acc">
-                    Account Number{' '}
-                    <span className="marathi-label">(खाते क्रमांक)</span>
-                  </label>
-                  <input
-                    id="remand-bank-acc"
-                    type="text"
-                    className="form-control"
-                    value={formData.bankAccountNo || ''}
-                    onChange={(e) => handleFieldChange('bankAccountNo', e.target.value)}
-                    placeholder="उदा. 259109855949"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="remand-txn-utr">
-                    TXN ID / UTR Number{' '}
-                    <span className="marathi-label">(व्यवहार आयडी / यूटीआर क्रमांक)</span>
-                  </label>
-                  <input
-                    id="remand-txn-utr"
-                    type="text"
-                    className="form-control"
-                    value={formData.txnIdUtr || ''}
-                    onChange={(e) => handleFieldChange('txnIdUtr', e.target.value)}
-                    placeholder="उदा. CNRBR52026032380902224"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="remand-txn-amt">
-                    Transaction Amount{' '}
-                    <span className="marathi-label">(व्यवहाराची रक्कम)</span>
-                  </label>
-                  <input
-                    id="remand-txn-amt"
-                    type="text"
-                    className="form-control"
-                    value={formData.txnAmount || ''}
-                    onChange={(e) => handleFieldChange('txnAmount', e.target.value)}
-                    placeholder="उदा. 13,00,000/-"
-                  />
-                </div>
-
+                {/* B. Grounds of Arrest */}
                 <div className="form-group span-2">
-                  <label className="form-label" htmlFor="remand-acc-holder">
-                    Account / Company Name{' '}
-                    <span className="marathi-label">(खातेदाराचे / कंपनीचे नाव)</span>
-                  </label>
-                  <input
-                    id="remand-acc-holder"
-                    type="text"
-                    className="form-control"
-                    value={formData.accountHolderName || ''}
-                    onChange={(e) => handleFieldChange('accountHolderName', e.target.value)}
-                    placeholder="उदा. Annkutgrains Private Limited"
-                  />
-                </div>
-
-                <div className="form-group span-2">
-                  <label className="form-label" htmlFor="remand-bank-addr">
-                    Bank Address on Record{' '}
-                    <span className="marathi-label">(बँक रेकॉर्डवरील पत्ता)</span>
+                  <label className="form-label" htmlFor="remand-grounds-arrest">
+                    Grounds of Arrest{' '}
+                    <span className="marathi-label">(अटकेची कारणे)</span>
                   </label>
                   <textarea
-                    id="remand-bank-addr"
-                    rows={2}
+                    id="remand-grounds-arrest"
+                    name="groundsOfArrest"
+                    rows={5}
                     className="form-control"
-                    value={formData.bankAddress || ''}
-                    onChange={(e) => handleFieldChange('bankAddress', e.target.value)}
-                    placeholder="उदा. Shop no. 105 to 108, 24/2 Modi tower, M.G ROAD, Indore, MP 452001"
-                  />
-                </div>
-
-                <div className="form-group span-2">
-                  <label className="form-label" htmlFor="remand-directors">
-                    Company Directors / Linked Persons{' '}
-                    <span className="marathi-label">(कंपनी डायरेक्टर व संबंधित व्यक्ती तपशील)</span>
-                  </label>
-                  <textarea
-                    id="remand-directors"
-                    rows={3}
-                    className="form-control"
-                    value={formData.companyDirectors || ''}
-                    onChange={(e) => handleFieldChange('companyDirectors', e.target.value)}
-                    placeholder="उदा. १) संदीप भानुदास मोरे, वय ४२ वर्षे... २) अजय सिंह तोमर..."
+                    value={formData.groundsOfArrest || ''}
+                    onChange={(e) => handleFieldChange('groundsOfArrest', e.target.value)}
+                    placeholder="अटकेची कारणे (तपासादरम्यान निष्पन्न झालेला सहभाग, पुरावे जप्ती इत्यादी)..."
                   />
                 </div>
               </div>
@@ -731,21 +615,21 @@ export default function RemandForm({
                   className="btn btn-primary"
                   onClick={() => handleGoToStep(4)}
                 >
-                  Next: Grounds & Investigation &rarr;
+                  Next: Investigation Points &rarr;
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 4: GROUNDS OF ARREST & INVESTIGATION */}
+          {/* STEP 4: PRIOR CUSTODY & INVESTIGATION POINTS */}
           {currentStep === 4 && (
             <div className="section-panel active">
               <div className="panel-header">
                 <h2>
-                  Section 4 — Grounds of Arrest & Investigation Points{' '}
-                  <span className="marathi-header">(अटकेची व तपासाची कारणे)</span>
+                  Section 4 — Prior Custody &amp; Investigation Points{' '}
+                  <span className="marathi-header">(तपास मुद्दे व इतर तपशील)</span>
                 </h2>
-                <p>Customize the arrest justifications, prior custody notes, and pending investigation tasks.</p>
+                <p>Customize prior custody notes, relative intimation, and pending investigation tasks.</p>
               </div>
 
               <div className="form-grid">
@@ -765,26 +649,6 @@ export default function RemandForm({
                 </div>
 
                 <div className="form-group span-2">
-                  <label className="form-label">
-                    Grounds for Arrest (11 Points — Editable){' '}
-                    <span className="marathi-label">(अटकेची कारणे - ११ मुद्दे)</span>
-                  </label>
-                  {(formData.arrestGrounds || []).map((ground, idx) => (
-                    <div key={idx} className="numbered-item-row" style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                      <span className="numbered-badge" style={{ minWidth: '28px', height: '28px', borderRadius: '50%', background: 'var(--color-primary-light, #e0e7ff)', color: 'var(--color-primary, #4338ca)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>
-                        {idx + 1}
-                      </span>
-                      <input
-                        type="text"
-                        className="form-control"
-                        value={ground}
-                        onChange={(e) => handleGroundChange(idx, e.target.value)}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div className="form-group span-2">
                   <label className="form-label" htmlFor="remand-rel-int">
                     Relative Intimation Note{' '}
                     <span className="marathi-label">(नातेवाईकांना अटकेची माहिती दिल्याबाबत नोंद)</span>
@@ -800,23 +664,84 @@ export default function RemandForm({
                 </div>
 
                 <div className="form-group span-2">
-                  <label className="form-label">
-                    Pending Investigation Points (7 Points — Editable){' '}
-                    <span className="marathi-label">(तपास करणे बाकी असलेल्या बाबी - ७ मुद्दे)</span>
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>
+                      Pending Investigation Points{' '}
+                      <span className="marathi-label">(तपास करणे बाकी असलेल्या बाबी)</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleAddInvestigationPoint}
+                      style={{
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                      title="Add a new investigation point / नवीन तपास मुद्दा जोडा"
+                    >
+                      + Add Point
+                    </button>
+                  </div>
                   {(formData.remainingInvestigationPoints || []).map((point, idx) => (
-                    <div key={idx} className="numbered-item-row" style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                      <span className="numbered-badge" style={{ minWidth: '28px', height: '28px', borderRadius: '50%', background: 'var(--color-primary-light, #e0e7ff)', color: 'var(--color-primary, #4338ca)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px' }}>
+                    <div key={idx} className="numbered-item-row" style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
+                      <span className="numbered-badge" style={{ minWidth: '28px', height: '28px', borderRadius: '50%', background: 'var(--color-primary-light, #e0e7ff)', color: 'var(--color-primary, #4338ca)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '13px', marginTop: '6px', flexShrink: 0 }}>
                         {idx + 1}
                       </span>
-                      <input
-                        type="text"
+                      <textarea
+                        rows={2}
                         className="form-control"
                         value={point}
+                        placeholder={`तपास मुद्दा क्रमांक ${idx + 1}...`}
                         onChange={(e) => handleInvestigationPointChange(idx, e.target.value)}
+                        style={{ flex: 1, resize: 'vertical' }}
                       />
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          marginTop: '4px',
+                          padding: '0.35rem 0.65rem',
+                          fontSize: '0.8rem',
+                          color: 'var(--danger-700, #b91c1c)',
+                          borderColor: 'var(--border-strong, #cbd5e1)',
+                          whiteSpace: 'nowrap'
+                        }}
+                        onClick={() => handleRemoveInvestigationPoint(idx)}
+                        title={`Remove point ${idx + 1} / मुद्दा ${idx + 1} काढा`}
+                      >
+                        Remove
+                      </button>
                     </div>
                   ))}
+                  {(formData.remainingInvestigationPoints || []).length > 0 && (
+                    <div style={{ marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={handleAddInvestigationPoint}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                        title="Add a new investigation point / नवीन तपास मुद्दा जोडा"
+                      >
+                        + Add Point
+                      </button>
+                    </div>
+                  )}
+                  {(formData.remainingInvestigationPoints || []).length === 0 && (
+                    <div style={{ padding: '12px', background: 'var(--bg-alt, #f1f5f9)', borderRadius: '6px', textAlign: 'center', color: 'var(--text-muted, #475569)', fontSize: '0.85rem' }}>
+                      No investigation points added. Click "+ Add Point" to add a point.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -874,7 +799,7 @@ export default function RemandForm({
                   </div>
                   <div>
                     <strong style={{ display: 'block', fontSize: '12px', color: 'var(--color-text-muted, #64748b)' }}>Investigating Officer / तपासी अधिकारी:</strong>
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{formData.ioName || '—'} ({formData.ioRank || ''})</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600 }}>{formData.ioName || '—'} ({formData.ioRank || ''}{formData.ioBuckleNo ? ', ' + formData.ioBuckleNo : ''})</span>
                   </div>
                 </div>
               </div>

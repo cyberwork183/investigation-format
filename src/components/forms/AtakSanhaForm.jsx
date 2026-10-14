@@ -5,11 +5,12 @@ import SharedOfficerFields from '../shared/SharedOfficerFields.jsx';
 import { validateAtakSanhaData } from '../../utils/documentValidation.js';
 import { generateAtakSanhaDocx } from '../../utils/docxGenerators/generateAtakSanhaDocx.js';
 import { downloadDocumentDocx } from '../../utils/docxGenerators/index.js';
+import { AdditionalAccusedList } from '../shared/SharedAccusedFields.jsx';
 
 const ATAK_SANHA_STEPS = [
   { num: 1, label: 'Station & Case Details', marathi: 'ठाणे व गुन्हा नोंदणी' },
   { num: 2, label: 'Complainant & Fraud Brief', marathi: 'फिर्यादी व गुन्ह्याची हकीकत' },
-  { num: 3, label: 'Bank & Money Trail', marathi: 'बँक खाते व फसवणूक तपशील' },
+  { num: 3, label: 'Investigation & Arrest Details', marathi: 'तपास व अटक तपशील' },
   { num: 4, label: 'Accused, Sanha & Generate', marathi: 'आरोपी, सान्हा नोंद व डाऊनलोड' }
 ];
 
@@ -242,7 +243,7 @@ export default function AtakSanhaForm({
                   &larr; Previous: Station &amp; Case
                 </button>
                 <button type="button" className="btn btn-primary" onClick={() => handleGoToStep(3)}>
-                  Next: Bank &amp; Money Trail &rarr;
+                  Next: Investigation &amp; Arrest Details &rarr;
                 </button>
               </div>
             </div>
@@ -253,131 +254,45 @@ export default function AtakSanhaForm({
             <div className="section-panel active">
               <div className="panel-header">
                 <h2>
-                  Section 3 — Beneficiary Bank Account &amp; Money Trail
-                  <span className="marathi-header">(बँक खाते व फसवणूक तपशील)</span>
+                  Section 3 — Case Facts &amp; Grounds of Arrest
+                  <span className="marathi-header">(गुन्ह्याची हकीकत व अटकेची कारणे)</span>
                 </h2>
-                <p>Record beneficiary bank account details, transaction ID, and prior production warrant info.</p>
+                <p>Provide brief facts of the case, grounds of arrest, and production warrant details.</p>
               </div>
 
               <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="bankName">
-                    Beneficiary Bank Name <span className="marathi-label">(बँकेचे नाव)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="bankName"
-                    name="bankName"
-                    className="form-control"
-                    value={formData.bankName || ''}
-                    onChange={(e) => handleFieldChange('bankName', e.target.value)}
-                    placeholder="e.g., IndusInd Bank"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="accountNo">
-                    Account Number <span className="marathi-label">(खाते क्रमांक)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="accountNo"
-                    name="accountNo"
-                    className="form-control"
-                    value={formData.accountNo || ''}
-                    onChange={(e) => handleFieldChange('accountNo', e.target.value)}
-                    placeholder="e.g., 259109855949"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="branchName">
-                    Branch Name <span className="marathi-label">(शाखा)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="branchName"
-                    name="branchName"
-                    className="form-control"
-                    value={formData.branchName || ''}
-                    onChange={(e) => handleFieldChange('branchName', e.target.value)}
-                    placeholder="e.g., Indore"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="txnId">
-                    Transaction ID / UTR <span className="marathi-label">(व्यवहार UTR / Txn ID)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="txnId"
-                    name="txnId"
-                    className="form-control"
-                    value={formData.txnId || ''}
-                    onChange={(e) => handleFieldChange('txnId', e.target.value)}
-                    placeholder="e.g., CNRBR52026032380902224"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="txnAmount">
-                    Transferred Amount <span className="marathi-label">(हस्तांतरित रक्कम)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="txnAmount"
-                    name="txnAmount"
-                    className="form-control"
-                    value={formData.txnAmount || ''}
-                    onChange={(e) => handleFieldChange('txnAmount', e.target.value)}
-                    placeholder="e.g., 13,00,000/-"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="accountName">
-                    Account Holder Name <span className="marathi-label">(खातेदाराचे नाव)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="accountName"
-                    name="accountName"
-                    className="form-control"
-                    value={formData.accountName || ''}
-                    onChange={(e) => handleFieldChange('accountName', e.target.value)}
-                    placeholder="e.g., Annkutgrains Private Limited"
-                  />
-                </div>
-
+                {/* 1. Brief Facts of the Case */}
                 <div className="form-group col-span-2">
-                  <label className="form-label" htmlFor="accountAddress">
-                    Bank Account Registered Address <span className="marathi-label">(बँक खात्याचा पत्ता)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="accountAddress"
-                    name="accountAddress"
-                    className="form-control"
-                    value={formData.accountAddress || ''}
-                    onChange={(e) => handleFieldChange('accountAddress', e.target.value)}
-                    placeholder="e.g., Shop no. 105 to 108, 24/2 Modi tower, M.G Road, Indore..."
-                  />
-                </div>
-
-                <div className="form-group col-span-2">
-                  <label className="form-label" htmlFor="directorsDetails">
-                    Company Directors Details <span className="marathi-label">(कंपनीचे संचालक तपशील)</span>
+                  <label className="form-label" htmlFor="caseBrief">
+                    Brief Facts of the Case <span className="marathi-label">(गुन्ह्याची थोडक्यात हकीकत)</span>
                   </label>
                   <textarea
-                    rows={3}
-                    id="directorsDetails"
-                    name="directorsDetails"
+                    rows={4}
+                    id="caseBrief"
+                    name="caseBrief"
                     className="form-control"
-                    value={formData.directorsDetails || ''}
-                    onChange={(e) => handleFieldChange('directorsDetails', e.target.value)}
-                    placeholder="१) संदीप भानुदास मोरे, वय ४२ वर्षे...\n२) अजय पि. पुरुषोत्तम सिंह तोमर..."
+                    value={formData.caseBrief || ''}
+                    onChange={(e) => handleFieldChange('caseBrief', e.target.value)}
+                    placeholder="Enter brief facts of the case / गुन्ह्याची थोडक्यात हकीकत प्रविष्ट करा..."
                   />
+                  {errors.caseBrief && <span className="field-error">{errors.caseBrief}</span>}
+                </div>
+
+                {/* 2. Grounds of Arrest */}
+                <div className="form-group col-span-2">
+                  <label className="form-label" htmlFor="groundsOfArrest">
+                    Grounds of Arrest <span className="marathi-label">(अटकेची कारणे)</span>
+                  </label>
+                  <textarea
+                    rows={5}
+                    id="groundsOfArrest"
+                    name="groundsOfArrest"
+                    className="form-control"
+                    value={formData.groundsOfArrest || ''}
+                    onChange={(e) => handleFieldChange('groundsOfArrest', e.target.value)}
+                    placeholder="Enter grounds of arrest / अटकेची कारणे प्रविष्ट करा..."
+                  />
+                  {errors.groundsOfArrest && <span className="field-error">{errors.groundsOfArrest}</span>}
                 </div>
 
                 <div className="form-group col-span-2">
@@ -481,6 +396,13 @@ export default function AtakSanhaForm({
                   />
                 </div>
 
+                <AdditionalAccusedList
+                  additionalAccused={formData.additionalAccused || []}
+                  onChange={(arr) => handleFieldChange('additionalAccused', arr)}
+                  showAlias={false}
+                  showFather={false}
+                />
+
                 <div className="form-group">
                   <label className="form-label" htmlFor="arrestDate">
                     Arrest Date <span className="marathi-label">(अटक दिनांक)</span>
@@ -545,14 +467,14 @@ export default function AtakSanhaForm({
                   <div><strong>Crime No:</strong> {formData.crimeNo || '—'}</div>
                   <div><strong>Accused:</strong> {formData.accusedName || '—'}</div>
                   <div><strong>Arrest Time:</strong> {formData.arrestTime || '—'}</div>
-                  <div><strong>Beneficiary Bank:</strong> {formData.accountNo ? `${formData.bankName} (${formData.accountNo})` : '—'}</div>
-                  <div><strong>Officer:</strong> {formData.ioName || '—'} ({formData.ioRank || 'वरिष्ठ पोलीस निरीक्षक'})</div>
+                  <div><strong>Grounds of Arrest:</strong> {formData.groundsOfArrest ? 'Recorded' : '—'}</div>
+                  <div><strong>Officer:</strong> {formData.ioName || '—'} ({formData.ioRank || 'वरिष्ठ पोलीस निरीक्षक'}{formData.ioBuckleNo ? ', ' + formData.ioBuckleNo : ''})</div>
                 </div>
               </div>
 
               <div className="panel-footer" style={{ justifyContent: 'space-between' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => handleGoToStep(3)}>
-                  &larr; Previous: Bank Details
+                  &larr; Previous: Investigation &amp; Arrest Details
                 </button>
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   {onShareDetails && (

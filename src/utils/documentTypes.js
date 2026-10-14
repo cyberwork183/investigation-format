@@ -25,7 +25,7 @@ export const DOCUMENT_TYPES = [
     badgeClass: 'badge-primary',
     category: 'Arrest & Custody',
     categoryMr: 'अटक व ताबा',
-    description: 'Statutory checklist submitted to Judicial Magistrate detailing grounds of arrest, bank fraud layer, and reasons under Section 35(1)(b)(2) BNSS.',
+    description: 'Statutory checklist submitted to Judicial Magistrate detailing brief facts of the case, grounds of arrest, and reasons under Section 35(1)(b)(2) BNSS.',
     descriptionMr: 'भारतीय नागरिक सुरक्षा संहिता कलम ३५(१)(ब)(२) अन्वये आरोपीच्या अटकेचे आधार, बँक तपशील व अटकेची कारणे मा. न्यायालयाकडे सादर करण्याचे चेकलिस्ट पत्र.',
     templateFile: '/template/notice-35-2-checklist-master.docx',
     icon: 'memo'
@@ -38,7 +38,7 @@ export const DOCUMENT_TYPES = [
     badgeClass: 'badge-secondary',
     category: 'Arrest & Custody',
     categoryMr: 'अटक व ताबा',
-    description: 'Official Station Diary (Sanha) arrest entry recording the IO statement, case brief, bank fraud details, and 11 grounds of arrest.',
+    description: 'Official Station Diary (Sanha) arrest entry recording the IO statement, brief facts of the case, grounds of arrest, and reasons for arrest.',
     descriptionMr: 'आरोपीच्या अटकेची अधिकृत स्टेशन डायरी (सान्हा) नोंद, ज्यामध्ये गुन्ह्याची पार्श्वभूमी, बँक खात्याचा तपशील, व अटकेची ११ कारणे नमूद केली जातात.',
     templateFile: '/template/atak-sanha-master.docx',
     icon: 'memo'
@@ -77,7 +77,7 @@ export const DOCUMENT_TYPES = [
     badgeClass: 'badge-danger',
     category: 'Court Remand',
     categoryMr: 'न्यायालयीन रिमांड',
-    description: 'Official application to Judicial Magistrate for Police Custody Remand with 11-point summary table, case brief, bank layer details, grounds of arrest, and investigation points.',
+    description: 'Official application to Judicial Magistrate for Police Custody Remand with 11-point summary table, brief facts of the case, grounds of arrest, reasons for arrest, and investigation points.',
     descriptionMr: '११ कलमी गोषवारा तक्ता, गुन्ह्याची थोडक्यात हकीकत, बँक लेयर तपशील, अटकेची कारणे व तपास मुद्दे यांसह मा. न्यायालयाकडे पोलीस कोठडी मागणी अर्ज.',
     templateFile: '/template/remand-application-master.docx',
     icon: 'gavel'
@@ -178,7 +178,7 @@ export const MAIN_DASHBOARD_CARDS = [
     badgeClass: 'badge-danger',
     category: 'Court Remand',
     categoryMr: 'न्यायालयीन रिमांड',
-    description: 'Official application to Judicial Magistrate for Police Custody Remand with 11-point summary table, case brief, bank layer details, and grounds of arrest.',
+    description: 'Official application to Judicial Magistrate for Police Custody Remand with 11-point summary table, brief facts of the case, grounds of arrest, and reasons for arrest.',
     descriptionMr: '११ कलमी गोषवारा तक्ता, गुन्ह्याची थोडक्यात हकीकत, बँक लेयर तपशील, अटकेची कारणे व तपास मुद्दे यांसह मा. न्यायालयाकडे पोलीस कोठडी मागणी अर्ज.',
     icon: 'gavel'
   },

@@ -270,7 +270,7 @@ export default function MedicalLetterForm({
                   <div><strong>Crime No:</strong> {formData.crimeNo || '—'}</div>
                   <div><strong>Accused:</strong> {formData.accusedName || '—'} {formData.accusedAlias ? `(${formData.accusedAlias})` : ''}</div>
                   <div><strong>Status:</strong> {formData.accusedStatus === 'to_be_arrested' ? 'Prior to Arrest' : 'In Police Custody'}</div>
-                  <div><strong>Officer:</strong> {formData.ioName || '—'} ({formData.ioRank || 'पोलीस निरीक्षक'})</div>
+                  <div><strong>Officer:</strong> {formData.ioName || '—'} ({formData.ioRank || 'पोलीस निरीक्षक'}{formData.ioBuckleNo ? ', ' + formData.ioBuckleNo : ''})</div>
                 </div>
               </div>
 

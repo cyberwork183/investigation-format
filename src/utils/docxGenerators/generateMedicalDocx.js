@@ -4,7 +4,15 @@
  */
 
 import JSZip from 'jszip';
-import { loadTemplateBuffer, replaceParagraphTextByMatch, ensureXmlNamespaces } from './commonDocxUtils.js';
+import {
+  loadTemplateBuffer,
+  replaceParagraphTextByMatch,
+  ensureXmlNamespaces,
+  updateStandardOfficerSignature,
+  getAllAccusedList,
+  formatSingleAccused,
+  formatAllAccusedListText
+} from './commonDocxUtils.js';
 import { MEDICAL_TEMPLATE_BASE64 } from '../allTemplatesBase64.js';
 
 export async function generateMedicalDocx(formData) {
@@ -17,17 +25,27 @@ export async function generateMedicalDocx(formData) {
   let docXml = await zip.file('word/document.xml').async('text');
 
   const letterDateStr = formData.letterDate || '३०-०३-२०२६';
-  const aliasPart = formData.accusedAlias ? ` उर्फ ${formData.accusedAlias}` : '';
-  const fatherPart = formData.accusedFather ? ` पिता/पालक ${formData.accusedFather}` : '';
-  const agePart = formData.accusedAge ? `, वय ${formData.accusedAge} वर्षे` : '';
-  const addressPart = formData.accusedAddress ? `, पत्ता – ${formData.accusedAddress}` : '';
-  const accusedFull = `आरोपीचे नाव - ${formData.accusedName || 'प्रेमसुख'}${aliasPart}${fatherPart}${agePart}${addressPart}`;
+  const accusedList = getAllAccusedList(formData);
+  if (accusedList.length === 0) {
+    accusedList.push({
+      accusedName: 'प्रेमसुख',
+      accusedAlias: 'प्रेम',
+      accusedFather: 'भाकर राम बिष्णोई',
+      accusedAge: '२०',
+      accusedAddress: 'जंबेश्वर नगरी, गाव मोटाई, पो. ठाणे चाखू, जि. फलोदी, राजस्थान'
+    });
+  }
+
+  const isMulti = accusedList.length > 1;
+  const accusedFull = isMulti
+    ? `आरोपीचे नाव -\n${formatAllAccusedListText(accusedList, { includeNumberForSingle: true })}`
+    : `आरोपीचे नाव - ${formatSingleAccused(accusedList[0])}`;
 
   const statusText = formData.accusedStatus === 'to_be_arrested'
-    ? 'मध्ये खालील आरोपीस अटक करावयाची आहे.'
-    : 'मध्ये खालील आरोपीस अटक करण्यात आलेले असुन तो सध्या पोलीस कोठडीत आहे.';
+    ? (isMulti ? 'मध्ये खालील आरोपींना अटक करावयाची आहे.' : 'मध्ये खालील आरोपीस अटक करावयाची आहे.')
+    : (isMulti ? 'मध्ये खालील आरोपींना अटक करण्यात आलेले असुन ते सध्या पोलीस कोठडीत आहेत.' : 'मध्ये खालील आरोपीस अटक करण्यात आलेले असुन तो सध्या पोलीस कोठडीत आहे.');
 
-  const subjectFull = `विषय- ${formData.policeStation || 'पोलीस ठाणे सायबर, नागपूर शहर'} अपराध क्रमांक ${formData.crimeNo || '108/2025'} कलम ${formData.actsSections || '318(2) BNS'} मधील आरोपीची सर्वसाधारण वैद्यकीय तपासणी करणे बाबत`;
+  const subjectFull = `विषय- ${formData.policeStation || 'पोलीस ठाणे सायबर, नागपूर शहर'} अपराध क्रमांक ${formData.crimeNo || '108/2025'} कलम ${formData.actsSections || '318(2) BNS'} मधील ${isMulti ? 'आरोपींची' : 'आरोपीची'} सर्वसाधारण वैद्यकीय तपासणी करणे बाबत`;
   const bodyFull = `उपरोक्त विषय सादर आहे की, ${formData.policeStation || 'पोलीस ठाणे सायबर, नागपूर शहर'} अपराध क्रमांक ${formData.crimeNo || '108/2025'} कलम ${formData.actsSections || '318(2) BNS'} ${statusText}`;
 
   docXml = replaceParagraphTextByMatch(docXml, (t) => t.startsWith('दिनांक') || (t.includes('दिनांक') && !t.includes('सादर')), `दिनांक ${letterDateStr}`);
@@ -37,8 +55,9 @@ export async function generateMedicalDocx(formData) {
   docXml = replaceParagraphTextByMatch(docXml, (t) => t.includes('वैद्यकीय तपासणी करणे बाबत'), subjectFull);
   docXml = replaceParagraphTextByMatch(docXml, (t) => t.includes('उपरोक्त विषय सादर आहे'), bodyFull);
   docXml = replaceParagraphTextByMatch(docXml, (t) => t.includes('आरोपीचे नाव'), accusedFull);
-  docXml = replaceParagraphTextByMatch(docXml, (t) => t.trim() === 'पोलीस निरीक्षक' || t.trim() === 'पोलीस उपनिरीक्षक' || t.trim() === 'वरीष्ठ पोलीस निरीक्षक', formData.ioRank || 'पोलीस निरीक्षक');
-  docXml = replaceParagraphTextByMatch(docXml, (t) => t.trim() === 'पोलीस ठाणे सायबर नागपूर शहर' || t.trim() === 'पोलीस ठाणे सायबर, नागपुर शहर', formData.ioStation || formData.policeStation || 'पोलीस ठाणे सायबर नागपूर शहर');
+  
+  // Dynamically populate Officer details in signature block (Name, Rank, Buckle No, Station)
+  docXml = updateStandardOfficerSignature(docXml, formData);
 
   docXml = ensureXmlNamespaces(docXml);
   zip.file('word/document.xml', docXml);

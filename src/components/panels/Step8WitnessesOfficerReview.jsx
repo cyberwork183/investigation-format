@@ -191,14 +191,14 @@ export default function Step8WitnessesOfficerReview({
       <div className="form-grid">
         <div className="form-group">
           <label className="form-label" htmlFor="officerName">
-            Officer Name <span className="marathi-label">(तपासणी अधिकाऱ्‍याचे नाव)</span> <span className="req">*</span>
+            Officer Name <span className="marathi-label">(तपासी अधिकाऱ्याचे नाव)</span> <span className="req">*</span>
           </label>
           <input
             type="text"
             id="officerName"
             name="officerName"
             className="form-control"
-            placeholder="e.g., S. G. Pandhare"
+            placeholder="उदा. तपासी अधिकाऱ्याचे नाव"
             value={formData.officerName || ''}
             onChange={(e) => onChange('officerName', e.target.value)}
             required
@@ -215,7 +215,7 @@ export default function Step8WitnessesOfficerReview({
             id="officerRank"
             name="officerRank"
             className="form-control"
-            placeholder="e.g., Asst. Police Inspector / PSI"
+            placeholder="उदा. सहाय्यक पोलीस निरीक्षक / PSI"
             value={formData.officerRank || ''}
             onChange={(e) => onChange('officerRank', e.target.value)}
             required
@@ -225,29 +225,29 @@ export default function Step8WitnessesOfficerReview({
 
         <div className="form-group">
           <label className="form-label" htmlFor="officerNo">
-            Badge / Identification No. <span className="marathi-label">(क्रमांक)</span>
+            Buckle / Identification Number <span className="marathi-label">(बक्कल क्रमांक)</span>
           </label>
           <input
             type="text"
             id="officerNo"
             name="officerNo"
             className="form-control"
-            placeholder="e.g., B-1234"
-            value={formData.officerNo || ''}
+            placeholder="उदा. ब.क्र. १२३४ / B-1234"
+            value={formData.officerNo || formData.ioBuckleNo || formData.ioBeltNo || ''}
             onChange={(e) => onChange('officerNo', e.target.value)}
           />
         </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor="place">
-            Place <span className="marathi-label">(ठिकाण)</span>
+            Police Station <span className="marathi-label">(पोलीस ठाणे)</span>
           </label>
           <input
             type="text"
             id="place"
             name="place"
             className="form-control"
-            placeholder="e.g., Cyber Police Station, Nagpur"
+            placeholder="उदा. पोलीस ठाणे सायबर, नागपूर शहर"
             value={formData.place || ''}
             onChange={(e) => onChange('place', e.target.value)}
           />
