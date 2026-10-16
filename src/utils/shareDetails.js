@@ -1,44 +1,122 @@
 /**
  * shareDetails.js
- * Comprehensive, reliable shared-details pool for all 11 official police document forms.
+ * Comprehensive, reliable Smart Shared-Details system for all 11 official police document forms.
+ * Supports Single-Accused and Multiple-Accused modes, conflict detection, and non-destructive population.
  * All data remains 100% client-side in the browser session memory (sessionStorage).
  */
 
-const STORAGE_KEY = 'POLICE_SHARED_DETAILS_POOL_V2';
+export const STORAGE_KEY = 'POLICE_SHARED_DETAILS_POOL_V3';
+
+// 1. Group definitions
+export const SINGLE_ACCUSED_DOCS = ['form3', 'notice_47', 'notice_48'];
+export const MULTIPLE_ACCUSED_DOCS = [
+  'remand',
+  'notice_35_2',
+  'atak_sanha',
+  'medical',
+  'lockup_ps',
+  'lockup_acp',
+  'custody_transfer',
+  'arrest_permission'
+];
+
+export function isSingleAccusedDoc(docId) {
+  return SINGLE_ACCUSED_DOCS.includes(docId);
+}
+
+export function isMultipleAccusedDoc(docId) {
+  return MULTIPLE_ACCUSED_DOCS.includes(docId);
+}
+
+// In-memory fallback if sessionStorage is unavailable (e.g. SSR or Node test environments)
+let _memoryStorage = {};
+
+function getSessionStorageSafe() {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      return window.sessionStorage;
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      return sessionStorage;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return {
+    getItem: (key) => _memoryStorage[key] || null,
+    setItem: (key, val) => { _memoryStorage[key] = String(val); },
+    removeItem: (key) => { delete _memoryStorage[key]; }
+  };
+}
 
 /**
- * Get stored shared details pool from sessionStorage (session-only)
+ * Get structured session pool from sessionStorage.
+ * Contains partitioned sub-pools: commonCase, singleAccused, multipleAccused.
  */
-export function getStoredSharedDetails() {
+export function getStoredSharedPool() {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const storage = getSessionStorageSafe();
+    const raw = storage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return { commonCase: {}, singleAccused: {}, multipleAccused: {} };
+    }
+    const parsed = JSON.parse(raw);
+    return {
+      commonCase: parsed.commonCase || {},
+      singleAccused: parsed.singleAccused || {},
+      multipleAccused: parsed.multipleAccused || {}
+    };
   } catch (err) {
     console.error('Failed to load shared details from storage:', err);
-    return {};
+    return { commonCase: {}, singleAccused: {}, multipleAccused: {} };
   }
 }
 
 /**
- * Save shared details pool to sessionStorage (session-only)
+ * Save structured session pool to sessionStorage.
  */
-export function saveStoredSharedDetails(sharedObj) {
+export function saveStoredSharedPool(pool) {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(sharedObj));
+    const storage = getSessionStorageSafe();
+    storage.setItem(STORAGE_KEY, JSON.stringify(pool));
   } catch (err) {
     console.error('Failed to save shared details to storage:', err);
   }
 }
 
 /**
- * Clear shared details pool (session reset)
+ * Clear shared details pool (session reset).
  */
 export function clearStoredSharedDetails() {
   try {
-    sessionStorage.removeItem(STORAGE_KEY);
+    const storage = getSessionStorageSafe();
+    storage.removeItem(STORAGE_KEY);
+    storage.removeItem('POLICE_SHARED_DETAILS_POOL_V2');
+    _memoryStorage = {};
   } catch (err) {
     console.error('Failed to clear shared details from storage:', err);
   }
+}
+
+/**
+ * Backward compatibility: get raw combined pool
+ */
+export function getStoredSharedDetails() {
+  const pool = getStoredSharedPool();
+  return {
+    ...pool.commonCase,
+    ...pool.singleAccused,
+    ...pool.multipleAccused
+  };
+}
+
+/**
+ * Backward compatibility: save raw combined pool
+ */
+export function saveStoredSharedDetails(sharedObj) {
+  const pool = getStoredSharedPool();
+  pool.commonCase = { ...pool.commonCase, ...sharedObj };
+  saveStoredSharedPool(pool);
 }
 
 /**
@@ -53,9 +131,16 @@ export function isNonEmpty(val) {
 }
 
 /**
- * Extracts non-empty canonical fields from a document form data.
+ * Helper to check if a value is empty
  */
-export function extractSharedDetailsFromDoc(docId, docData = {}) {
+export function isEmpty(val) {
+  return !isNonEmpty(val);
+}
+
+/**
+ * Extracts non-empty common crime & investigation details from a form.
+ */
+export function extractCommonCrimeDetails(docId, docData = {}) {
   const extracted = {};
 
   const setIfVal = (key, val) => {
@@ -76,11 +161,6 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     setIfVal('date', docData.date);
     setIfVal('actsSections', docData.actsSections || docData.actsSectionsMr);
     setIfVal('courtName', docData.courtName);
-    setIfVal('accusedName', docData.accusedName);
-    setIfVal('accusedFather', docData.fatherName);
-    setIfVal('accusedAlias', docData.firstAlias || docData.secondAlias);
-    setIfVal('accusedAge', docData.physicalFeatures?.dob);
-    setIfVal('accusedAddress', docData.presentAddress || docData.permanentAddress);
     setIfVal('arrestDate', docData.arrestDate);
     setIfVal('arrestTime', docData.arrestTime);
     if (docData.arrestDate || docData.arrestTime) {
@@ -93,37 +173,15 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     setIfVal('ioBuckleNo', docData.officerNo || docData.ioBuckleNo);
     setIfVal('relativeName', docData.relativeIntimatedName || docData.witness1Name);
   } else {
-    // Shared fields across Remand, Medical, Lockup, Permission, Notices, Sanha
     setIfVal('crimeNo', docData.crimeNo || docData.firNo);
-    setIfVal('policeStation', docData.psName || docData.policeStationHeader || docData.policeStation || docData.sendingStation);
+    setIfVal(
+      'policeStation',
+      docData.psName || docData.policeStationHeader || docData.policeStation || docData.sendingStation
+    );
     setIfVal('year', docData.year);
     setIfVal('date', docData.letterDate || docData.noticeDate || docData.entryDate || docData.date || docData.complaintDate);
     setIfVal('actsSections', docData.actsSections);
     setIfVal('courtName', docData.courtName);
-
-    // Accused details
-    setIfVal('accusedName', docData.accusedName);
-    setIfVal('accusedAge', docData.accusedAge);
-    setIfVal('accusedAddress', docData.accusedAddress);
-    setIfVal('accusedAlias', docData.accusedAlias);
-    setIfVal('accusedFather', docData.accusedFather);
-
-    if (docId !== 'form3' && docId !== 'notice_47' && docId !== 'notice_48') {
-      if (Array.isArray(docData.additionalAccused) && docData.additionalAccused.length > 0) {
-        const validAdditional = docData.additionalAccused
-          .filter((a) => a && typeof a.accusedName === 'string' && a.accusedName.trim() !== '')
-          .map((a) => ({
-            accusedName: a.accusedName.trim(),
-            accusedAlias: (a.accusedAlias || '').trim(),
-            accusedFather: (a.accusedFather || '').trim(),
-            accusedAge: (a.accusedAge || '').trim(),
-            accusedAddress: (a.accusedAddress || '').trim()
-          }));
-        if (validAdditional.length > 0) {
-          extracted.additionalAccused = validAdditional;
-        }
-      }
-    }
 
     // Arrest details
     setIfVal('arrestDate', docData.arrestDate);
@@ -134,7 +192,7 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     }
 
     // Investigating Officer details
-    setIfVal('ioName', docData.ioName || docData.officerName);
+    setIfVal('ioName', docData.ioName || docData.officerName || docData.reporter);
     setIfVal('ioRank', docData.ioRank || docData.officerRank);
     setIfVal('ioStation', docData.ioStation || docData.place);
     setIfVal('ioBeltNo', docData.ioBuckleNo || docData.ioBeltNo || docData.officerNo);
@@ -187,9 +245,35 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
     setIfVal('productionWarrantDetails', docData.productionWarrantDetails || docData.priorProductionDetails || docData.priorCaseDetails);
     setIfVal('producedFromJail', docData.producedFromJail || docData.producingAuthority);
     setIfVal('courtProductionDate', docData.courtProductionDate);
+  }
 
-    // Permission to arrest specific handling
-    if (docId === 'arrest_permission' && docData.producedAccusedName && !extracted.accusedName) {
+  return extracted;
+}
+
+/**
+ * Extracts non-empty accused personal details from a form.
+ */
+export function extractAccusedDetails(docId, docData = {}) {
+  const primary = {};
+
+  const setIfVal = (key, val) => {
+    if (val !== undefined && val !== null && typeof val === 'string') {
+      const trimmed = val.trim();
+      if (trimmed !== '') primary[key] = trimmed;
+    } else if (typeof val === 'number') {
+      primary[key] = String(val);
+    }
+  };
+
+  if (docId === 'form3') {
+    setIfVal('accusedName', docData.accusedName);
+    setIfVal('accusedFather', docData.fatherName);
+    setIfVal('accusedAlias', docData.firstAlias || docData.secondAlias);
+    setIfVal('accusedAge', docData.physicalFeatures?.dob);
+    setIfVal('accusedAddress', docData.presentAddress || docData.permanentAddress);
+  } else if (docId === 'arrest_permission') {
+    setIfVal('accusedName', docData.accusedName);
+    if (!primary.accusedName && docData.producedAccusedName) {
       const rawProd = docData.producedAccusedName;
       const commaIdx = rawProd.indexOf(',');
       if (commaIdx > 0) {
@@ -198,311 +282,642 @@ export function extractSharedDetailsFromDoc(docId, docData = {}) {
         setIfVal('accusedName', rawProd.trim());
       }
     }
+    setIfVal('accusedAge', docData.accusedAge);
+    setIfVal('accusedAddress', docData.accusedAddress);
+    setIfVal('accusedAlias', docData.accusedAlias);
+    setIfVal('accusedFather', docData.accusedFather);
+  } else {
+    setIfVal('accusedName', docData.accusedName);
+    setIfVal('accusedAge', docData.accusedAge);
+    setIfVal('accusedAddress', docData.accusedAddress);
+    setIfVal('accusedAlias', docData.accusedAlias);
+    setIfVal('accusedFather', docData.accusedFather);
   }
 
-  return extracted;
+  let additionalAccused = null;
+  if (isMultipleAccusedDoc(docId) && Array.isArray(docData.additionalAccused) && docData.additionalAccused.length > 0) {
+    const validAdditional = docData.additionalAccused
+      .filter((a) => a && typeof a.accusedName === 'string' && a.accusedName.trim() !== '')
+      .map((a) => ({
+        accusedName: a.accusedName.trim(),
+        accusedAlias: (a.accusedAlias || '').trim(),
+        accusedFather: (a.accusedFather || '').trim(),
+        accusedAge: (a.accusedAge || '').trim(),
+        accusedAddress: (a.accusedAddress || '').trim()
+      }));
+    if (validAdditional.length > 0) {
+      additionalAccused = validAdditional;
+    }
+  }
+
+  return { primary, additionalAccused };
 }
 
 /**
- * Merges shared fields into target document data.
- * IMPORTANT: Only populates EMPTY fields. Never overwrites existing non-empty values.
+ * Checks whether a document has any non-empty shareable data (case or accused).
  */
-export function applySharedDetailsToDoc(docId, targetDocData = {}, sharedPool = {}) {
-  const updated = { ...targetDocData };
+export function hasAnyShareableDetails(docId, docData = {}) {
+  const common = extractCommonCrimeDetails(docId, docData);
+  if (Object.keys(common).length > 0) return true;
 
-  const isEmpty = (val) => {
-    return val === undefined || val === null || (typeof val === 'string' && val.trim() === '');
+  const accused = extractAccusedDetails(docId, docData);
+  if (Object.keys(accused.primary).length > 0) return true;
+  if (accused.additionalAccused && accused.additionalAccused.length > 0) return true;
+
+  return false;
+}
+
+/**
+ * Backward compatibility: extract all fields into flat object
+ */
+export function extractSharedDetailsFromDoc(docId, docData = {}) {
+  const common = extractCommonCrimeDetails(docId, docData);
+  const accused = extractAccusedDetails(docId, docData);
+  const combined = { ...common, ...accused.primary };
+  if (accused.additionalAccused) {
+    combined.additionalAccused = accused.additionalAccused;
+  }
+  return combined;
+}
+
+/**
+ * Helper to check whether two dates are equivalent across YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY,
+ * and Marathi digits.
+ */
+export function areDatesEquivalent(d1, d2) {
+  if (!d1 || !d2) return false;
+  // Convert Marathi digits to ASCII
+  const marathiDigits = '०१२३४५६७८९';
+  const toAscii = (s) => String(s).replace(/[०-९]/g, (ch) => marathiDigits.indexOf(ch));
+  const s1 = toAscii(d1).trim();
+  const s2 = toAscii(d2).trim();
+  if (s1 === s2) return true;
+
+  const parseParts = (str) => {
+    // Matches YYYY-MM-DD or DD-MM-YYYY or DD/MM/YYYY
+    const parts = str.split(/[-/.]/);
+    if (parts.length !== 3) return null;
+    const [p0, p1, p2] = parts.map((p) => parseInt(p, 10));
+    if (isNaN(p0) || isNaN(p1) || isNaN(p2)) return null;
+
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD
+      return { y: p0, m: p1, d: p2 };
+    } else if (parts[2].length === 4) {
+      // DD-MM-YYYY
+      return { y: p2, m: p1, d: p0 };
+    }
+    return null;
   };
 
+  const p1 = parseParts(s1);
+  const p2 = parseParts(s2);
+  if (p1 && p2) {
+    return p1.y === p2.y && p1.m === p2.m && p1.d === p2.d;
+  }
+  return false;
+}
+
+/**
+ * Checks whether two string values represent the same content,
+ * ignoring trivial differences like commas, extra whitespace, or date formatting.
+ */
+export function areValuesEquivalent(val1, val2) {
+  if (val1 === val2) return true;
+  if (val1 === undefined || val1 === null || val2 === undefined || val2 === null) {
+    return val1 === val2;
+  }
+
+  const s1 = String(val1).trim();
+  const s2 = String(val2).trim();
+  if (s1 === s2) return true;
+
+  // Check date equivalence
+  if (areDatesEquivalent(s1, s2)) return true;
+
+  // Normalize punctuation and whitespace
+  const norm1 = s1.replace(/[,.\-_]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  const norm2 = s2.replace(/[,.\-_]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (norm1 === norm2) return true;
+
+  // Normalize Marathi Police Station synonyms and spelling variants
+  const normPs1 = norm1.replace(/स्टेशन/g, 'ठाणे').replace(/नागपुर/g, 'नागपूर');
+  const normPs2 = norm2.replace(/स्टेशन/g, 'ठाणे').replace(/नागपुर/g, 'नागपूर');
+  if (normPs1 === normPs2) return true;
+
+  return false;
+}
+
+/**
+ * Helper to apply a scalar field with conflict detection.
+ * If target field is empty, sets target[targetKey] = incomingVal.
+ * If target field is non-empty and differs from incomingVal, does NOT overwrite, and records a conflict.
+ */
+function applyFieldWithConflictCheck(targetDoc, targetKey, incomingVal, conflicts, docId, label) {
+  if (!isNonEmpty(incomingVal)) return;
+
+  const currentVal = targetDoc[targetKey];
+  if (isEmpty(currentVal)) {
+    targetDoc[targetKey] = incomingVal;
+  } else {
+    if (!areValuesEquivalent(currentVal, incomingVal)) {
+      conflicts.push({
+        docId,
+        field: label || targetKey,
+        currentVal: String(currentVal).trim(),
+        incomingVal: String(incomingVal).trim()
+      });
+      // Do NOT overwrite: preserve existing value!
+    }
+  }
+}
+
+/**
+ * Apply common crime & investigation details to a document.
+ */
+function applyCommonCrimeFields(docId, target, pool, conflicts) {
+  if (!pool) return;
+
   // Crime / FIR Number
-  if (sharedPool.crimeNo) {
+  if (pool.crimeNo) {
     if (docId === 'form3') {
-      if (isEmpty(updated.firNo)) updated.firNo = sharedPool.crimeNo;
+      applyFieldWithConflictCheck(target, 'firNo', pool.crimeNo, conflicts, docId, 'Crime/FIR No');
     } else {
-      if (isEmpty(updated.crimeNo)) updated.crimeNo = sharedPool.crimeNo;
+      applyFieldWithConflictCheck(target, 'crimeNo', pool.crimeNo, conflicts, docId, 'Crime No');
     }
   }
 
-  // Police Station / Station Header / Sending Station
-  if (sharedPool.policeStation) {
+  // Police Station
+  if (pool.policeStation) {
     if (docId === 'form3') {
-      if (isEmpty(updated.policeStation)) updated.policeStation = sharedPool.policeStation;
+      applyFieldWithConflictCheck(target, 'policeStation', pool.policeStation, conflicts, docId, 'Police Station');
     } else if (docId === 'remand') {
-      if (isEmpty(updated.psName)) updated.psName = sharedPool.policeStation;
-      if (isEmpty(updated.policeStationHeader)) updated.policeStationHeader = sharedPool.policeStation;
+      applyFieldWithConflictCheck(target, 'psName', pool.policeStation, conflicts, docId, 'Police Station');
+      applyFieldWithConflictCheck(target, 'policeStationHeader', pool.policeStation, conflicts, docId, 'Police Station Header');
     } else if (docId === 'arrest_permission') {
-      if (isEmpty(updated.policeStationHeader)) updated.policeStationHeader = sharedPool.policeStation;
+      applyFieldWithConflictCheck(target, 'policeStationHeader', pool.policeStation, conflicts, docId, 'Police Station Header');
     } else if (docId === 'medical') {
-      if (isEmpty(updated.policeStation)) updated.policeStation = sharedPool.policeStation;
+      applyFieldWithConflictCheck(target, 'policeStation', pool.policeStation, conflicts, docId, 'Police Station');
     } else if (docId === 'lockup_ps' || docId === 'lockup_acp' || docId === 'custody_transfer') {
-      if (isEmpty(updated.sendingStation)) updated.sendingStation = sharedPool.policeStation;
+      applyFieldWithConflictCheck(target, 'sendingStation', pool.policeStation, conflicts, docId, 'Police Station');
     } else {
-      if (isEmpty(updated.psName)) updated.psName = sharedPool.policeStation;
+      applyFieldWithConflictCheck(target, 'psName', pool.policeStation, conflicts, docId, 'Police Station');
     }
+  }
+
+  // District & State (Form III)
+  if (docId === 'form3') {
+    if (pool.district) applyFieldWithConflictCheck(target, 'district', pool.district, conflicts, docId, 'District');
+    if (pool.state) applyFieldWithConflictCheck(target, 'state', pool.state, conflicts, docId, 'State');
   }
 
   // Year
-  if (sharedPool.year && isEmpty(updated.year)) {
-    updated.year = sharedPool.year;
+  if (pool.year && target.year !== undefined) {
+    applyFieldWithConflictCheck(target, 'year', pool.year, conflicts, docId, 'Year');
   }
 
   // Date
-  if (sharedPool.date) {
+  if (pool.date) {
     if (docId === 'form3') {
-      if (isEmpty(updated.date)) updated.date = sharedPool.date;
-    } else if (updated.letterDate !== undefined && isEmpty(updated.letterDate)) {
-      updated.letterDate = sharedPool.date;
+      applyFieldWithConflictCheck(target, 'date', pool.date, conflicts, docId, 'Date');
+    } else if (target.letterDate !== undefined) {
+      applyFieldWithConflictCheck(target, 'letterDate', pool.date, conflicts, docId, 'Letter/Notice Date');
     }
   }
 
   // Acts & Sections
-  if (sharedPool.actsSections) {
+  if (pool.actsSections) {
     if (docId === 'form3') {
-      if (isEmpty(updated.actsSections)) updated.actsSections = sharedPool.actsSections;
-      if (isEmpty(updated.actsSectionsMr)) updated.actsSectionsMr = sharedPool.actsSections;
-    } else {
-      if (isEmpty(updated.actsSections)) updated.actsSections = sharedPool.actsSections;
+      applyFieldWithConflictCheck(target, 'actsSections', pool.actsSections, conflicts, docId, 'Acts & Sections');
+      if (isEmpty(target.actsSectionsMr)) {
+        target.actsSectionsMr = pool.actsSections;
+      }
+    } else if (target.actsSections !== undefined) {
+      applyFieldWithConflictCheck(target, 'actsSections', pool.actsSections, conflicts, docId, 'Acts & Sections');
     }
   }
 
   // Court Name
-  if (sharedPool.courtName) {
-    if (updated.courtName !== undefined && isEmpty(updated.courtName)) {
-      updated.courtName = sharedPool.courtName;
-    }
+  if (pool.courtName && target.courtName !== undefined) {
+    applyFieldWithConflictCheck(target, 'courtName', pool.courtName, conflicts, docId, 'Court Name');
   }
 
-  // Accused Name
-  if (sharedPool.accusedName) {
-    if (docId === 'arrest_permission') {
-      if (isEmpty(updated.producedAccusedName)) {
-        const agePart = sharedPool.accusedAge ? `, वय ${sharedPool.accusedAge} वर्षे` : '';
-        const addrPart = sharedPool.accusedAddress ? `, पत्ता – ${sharedPool.accusedAddress}` : '';
-        updated.producedAccusedName = `${sharedPool.accusedName}${agePart}${addrPart}`;
-      }
-      if (isEmpty(updated.accusedListText)) {
-        const agePart = sharedPool.accusedAge ? `, वय ${sharedPool.accusedAge} वर्षे` : '';
-        const addrPart = sharedPool.accusedAddress ? `, पत्ता – ${sharedPool.accusedAddress}` : '';
-        updated.accusedListText = `१) ${sharedPool.accusedName}${agePart}${addrPart}`;
-      }
-    } else {
-      if (isEmpty(updated.accusedName)) updated.accusedName = sharedPool.accusedName;
-    }
+  // Arrest Date, Time, DateTime
+  if (pool.arrestDate && target.arrestDate !== undefined) {
+    applyFieldWithConflictCheck(target, 'arrestDate', pool.arrestDate, conflicts, docId, 'Arrest Date');
   }
-
-  // Accused Age
-  if (sharedPool.accusedAge && docId !== 'arrest_permission') {
-    if (docId === 'form3') {
-      if (updated.physicalFeatures && isEmpty(updated.physicalFeatures.dob)) {
-        updated.physicalFeatures = { ...updated.physicalFeatures, dob: sharedPool.accusedAge };
-      }
-    } else {
-      if (isEmpty(updated.accusedAge)) updated.accusedAge = sharedPool.accusedAge;
-    }
+  if (pool.arrestTime && target.arrestTime !== undefined) {
+    applyFieldWithConflictCheck(target, 'arrestTime', pool.arrestTime, conflicts, docId, 'Arrest Time');
   }
-
-  // Accused Address
-  if (sharedPool.accusedAddress && docId !== 'arrest_permission') {
-    if (docId === 'form3') {
-      if (isEmpty(updated.presentAddress)) updated.presentAddress = sharedPool.accusedAddress;
-      if (isEmpty(updated.permanentAddress)) updated.permanentAddress = sharedPool.accusedAddress;
-    } else {
-      if (isEmpty(updated.accusedAddress)) updated.accusedAddress = sharedPool.accusedAddress;
-    }
-  }
-
-  // Accused Alias & Father
-  if (sharedPool.accusedAlias) {
-    if (docId === 'form3') {
-      if (isEmpty(updated.firstAlias)) updated.firstAlias = sharedPool.accusedAlias;
-    } else if (updated.accusedAlias !== undefined && isEmpty(updated.accusedAlias)) {
-      updated.accusedAlias = sharedPool.accusedAlias;
-    }
-  }
-
-  if (sharedPool.accusedFather) {
-    if (docId === 'form3') {
-      if (isEmpty(updated.fatherName)) updated.fatherName = sharedPool.accusedFather;
-    } else if (updated.accusedFather !== undefined && isEmpty(updated.accusedFather)) {
-      updated.accusedFather = sharedPool.accusedFather;
-    }
-  }
-
-  // Additional Accused (Strictly for multi-accused documents only)
-  if (docId !== 'form3' && docId !== 'notice_47' && docId !== 'notice_48') {
-    if (Array.isArray(sharedPool.additionalAccused) && sharedPool.additionalAccused.length > 0) {
-      if (!Array.isArray(updated.additionalAccused) || updated.additionalAccused.length === 0) {
-        updated.additionalAccused = sharedPool.additionalAccused.map((a) => ({ ...a }));
-      }
-    }
-  }
-
-  // Arrest Date & Time
-  if (sharedPool.arrestDate) {
-    if (updated.arrestDate !== undefined && isEmpty(updated.arrestDate)) {
-      updated.arrestDate = sharedPool.arrestDate;
-    }
-  }
-  if (sharedPool.arrestTime) {
-    if (updated.arrestTime !== undefined && isEmpty(updated.arrestTime)) {
-      updated.arrestTime = sharedPool.arrestTime;
-    }
-  }
-  if (sharedPool.arrestDateTime) {
-    if (updated.arrestDateTime !== undefined && isEmpty(updated.arrestDateTime)) {
-      updated.arrestDateTime = sharedPool.arrestDateTime;
-    }
-  } else if ((sharedPool.arrestDate || sharedPool.arrestTime) && updated.arrestDateTime !== undefined && isEmpty(updated.arrestDateTime)) {
-    updated.arrestDateTime = `दिनांक ${sharedPool.arrestDate || ''} चे ${sharedPool.arrestTime || ''} वा.`;
+  if (pool.arrestDateTime && target.arrestDateTime !== undefined) {
+    applyFieldWithConflictCheck(target, 'arrestDateTime', pool.arrestDateTime, conflicts, docId, 'Arrest Date-Time');
+  } else if ((pool.arrestDate || pool.arrestTime) && target.arrestDateTime !== undefined && isEmpty(target.arrestDateTime)) {
+    target.arrestDateTime = `दिनांक ${pool.arrestDate || ''} चे ${pool.arrestTime || ''} वा.`;
   }
 
   // Investigating Officer details
-  if (sharedPool.ioName) {
+  if (pool.ioName) {
     if (docId === 'form3') {
-      if (isEmpty(updated.officerName)) updated.officerName = sharedPool.ioName;
+      applyFieldWithConflictCheck(target, 'officerName', pool.ioName, conflicts, docId, 'Officer Name');
     } else {
-      if (isEmpty(updated.ioName)) updated.ioName = sharedPool.ioName;
-    }
-  }
-
-  if (sharedPool.ioRank) {
-    if (docId === 'form3') {
-      if (isEmpty(updated.officerRank)) updated.officerRank = sharedPool.ioRank;
-    } else {
-      if (isEmpty(updated.ioRank)) updated.ioRank = sharedPool.ioRank;
-    }
-  }
-
-  if (sharedPool.ioStation) {
-    if (docId === 'form3') {
-      if (isEmpty(updated.place)) updated.place = sharedPool.ioStation;
-    } else {
-      if (updated.ioStation !== undefined && isEmpty(updated.ioStation)) {
-        updated.ioStation = sharedPool.ioStation;
+      if (target.ioName !== undefined) {
+        applyFieldWithConflictCheck(target, 'ioName', pool.ioName, conflicts, docId, 'IO Name');
       }
-      if (updated.policeStationHeader !== undefined && isEmpty(updated.policeStationHeader)) {
-        updated.policeStationHeader = sharedPool.ioStation;
+      if (target.reporter !== undefined) {
+        applyFieldWithConflictCheck(target, 'reporter', pool.ioName, conflicts, docId, 'Reporter IO');
       }
     }
   }
 
-  const buckleVal = sharedPool.ioBuckleNo || sharedPool.ioBeltNo;
+  if (pool.ioRank) {
+    if (docId === 'form3') {
+      applyFieldWithConflictCheck(target, 'officerRank', pool.ioRank, conflicts, docId, 'Officer Rank');
+    } else if (target.ioRank !== undefined) {
+      applyFieldWithConflictCheck(target, 'ioRank', pool.ioRank, conflicts, docId, 'IO Rank');
+    }
+  }
+
+  if (pool.ioStation) {
+    if (docId === 'form3') {
+      applyFieldWithConflictCheck(target, 'place', pool.ioStation, conflicts, docId, 'Officer Station');
+    } else if (target.ioStation !== undefined) {
+      applyFieldWithConflictCheck(target, 'ioStation', pool.ioStation, conflicts, docId, 'IO Station');
+    }
+  }
+
+  const buckleVal = pool.ioBuckleNo || pool.ioBeltNo;
   if (buckleVal) {
     if (docId === 'form3') {
-      if (isEmpty(updated.officerNo)) updated.officerNo = buckleVal;
+      applyFieldWithConflictCheck(target, 'officerNo', buckleVal, conflicts, docId, 'Officer Buckle No');
     } else {
-      if (updated.ioBuckleNo !== undefined && isEmpty(updated.ioBuckleNo)) {
-        updated.ioBuckleNo = buckleVal;
-      } else if (updated.ioBuckleNo === undefined && isEmpty(updated.ioBeltNo)) {
-        updated.ioBuckleNo = buckleVal;
+      if (target.ioBuckleNo !== undefined) {
+        applyFieldWithConflictCheck(target, 'ioBuckleNo', buckleVal, conflicts, docId, 'IO Buckle No');
       }
-      if (updated.ioBeltNo !== undefined && isEmpty(updated.ioBeltNo)) {
-        updated.ioBeltNo = buckleVal;
+      if (target.ioBeltNo !== undefined) {
+        applyFieldWithConflictCheck(target, 'ioBeltNo', buckleVal, conflicts, docId, 'IO Belt No');
       }
     }
   }
 
-  if (sharedPool.ioPhone && updated.ioPhone !== undefined && isEmpty(updated.ioPhone)) {
-    updated.ioPhone = sharedPool.ioPhone;
+  if (pool.ioPhone && target.ioPhone !== undefined) {
+    applyFieldWithConflictCheck(target, 'ioPhone', pool.ioPhone, conflicts, docId, 'IO Phone');
   }
 
   // Complainant details
-  if (sharedPool.complainantName && updated.complainantName !== undefined && isEmpty(updated.complainantName)) {
-    updated.complainantName = sharedPool.complainantName;
+  if (pool.complainantName && target.complainantName !== undefined) {
+    applyFieldWithConflictCheck(target, 'complainantName', pool.complainantName, conflicts, docId, 'Complainant Name');
   }
-  if (sharedPool.complainantAge && updated.complainantAge !== undefined && isEmpty(updated.complainantAge)) {
-    updated.complainantAge = sharedPool.complainantAge;
+  if (pool.complainantAge && target.complainantAge !== undefined) {
+    applyFieldWithConflictCheck(target, 'complainantAge', pool.complainantAge, conflicts, docId, 'Complainant Age');
   }
-  if (sharedPool.complainantProfession && updated.complainantProfession !== undefined && isEmpty(updated.complainantProfession)) {
-    updated.complainantProfession = sharedPool.complainantProfession;
+  if (pool.complainantProfession && target.complainantProfession !== undefined) {
+    applyFieldWithConflictCheck(target, 'complainantProfession', pool.complainantProfession, conflicts, docId, 'Complainant Profession');
   }
-  if (sharedPool.complainantAddress && updated.complainantAddress !== undefined && isEmpty(updated.complainantAddress)) {
-    updated.complainantAddress = sharedPool.complainantAddress;
-  }
-
-  // Case narration & grounds of arrest
-  if (sharedPool.caseBrief && updated.caseBrief !== undefined && isEmpty(updated.caseBrief)) {
-    updated.caseBrief = sharedPool.caseBrief;
-  }
-  if (sharedPool.groundsOfArrest && updated.groundsOfArrest !== undefined && isEmpty(updated.groundsOfArrest)) {
-    updated.groundsOfArrest = sharedPool.groundsOfArrest;
+  if (pool.complainantAddress && target.complainantAddress !== undefined) {
+    applyFieldWithConflictCheck(target, 'complainantAddress', pool.complainantAddress, conflicts, docId, 'Complainant Address');
   }
 
-  // Bank details
-  if (sharedPool.bankName) {
-    if (updated.bankName !== undefined && isEmpty(updated.bankName)) updated.bankName = sharedPool.bankName;
+  // Case Brief & Grounds of Arrest
+  if (pool.caseBrief && target.caseBrief !== undefined) {
+    applyFieldWithConflictCheck(target, 'caseBrief', pool.caseBrief, conflicts, docId, 'Case Brief');
   }
-  if (sharedPool.accountNo) {
-    if (updated.accountNo !== undefined && isEmpty(updated.accountNo)) updated.accountNo = sharedPool.accountNo;
-    if (updated.bankAccountNo !== undefined && isEmpty(updated.bankAccountNo)) updated.bankAccountNo = sharedPool.accountNo;
+  if (pool.groundsOfArrest && target.groundsOfArrest !== undefined) {
+    applyFieldWithConflictCheck(target, 'groundsOfArrest', pool.groundsOfArrest, conflicts, docId, 'Grounds of Arrest');
   }
-  if (sharedPool.branchName) {
-    if (updated.branchName !== undefined && isEmpty(updated.branchName)) updated.branchName = sharedPool.branchName;
-    if (updated.bankBranch !== undefined && isEmpty(updated.bankBranch)) updated.bankBranch = sharedPool.branchName;
+
+  // Bank & Transaction details
+  if (pool.bankName) {
+    applyFieldWithConflictCheck(target, 'bankName', pool.bankName, conflicts, docId, 'Bank Name');
   }
-  if (sharedPool.txnId) {
-    if (updated.txnId !== undefined && isEmpty(updated.txnId)) updated.txnId = sharedPool.txnId;
-    if (updated.txnIdUtr !== undefined && isEmpty(updated.txnIdUtr)) updated.txnIdUtr = sharedPool.txnId;
+  if (pool.accountNo) {
+    applyFieldWithConflictCheck(target, 'accountNo', pool.accountNo, conflicts, docId, 'Account No');
+    if (target.bankAccountNo !== undefined) applyFieldWithConflictCheck(target, 'bankAccountNo', pool.accountNo, conflicts, docId, 'Bank Account No');
   }
-  if (sharedPool.txnAmount) {
-    if (updated.txnAmount !== undefined && isEmpty(updated.txnAmount)) updated.txnAmount = sharedPool.txnAmount;
+  if (pool.branchName) {
+    applyFieldWithConflictCheck(target, 'branchName', pool.branchName, conflicts, docId, 'Branch Name');
+    if (target.bankBranch !== undefined) applyFieldWithConflictCheck(target, 'bankBranch', pool.branchName, conflicts, docId, 'Bank Branch');
   }
-  if (sharedPool.accountName) {
-    if (updated.accountName !== undefined && isEmpty(updated.accountName)) updated.accountName = sharedPool.accountName;
-    if (updated.accountHolderName !== undefined && isEmpty(updated.accountHolderName)) updated.accountHolderName = sharedPool.accountName;
+  if (pool.txnId) {
+    applyFieldWithConflictCheck(target, 'txnId', pool.txnId, conflicts, docId, 'Txn ID');
+    if (target.txnIdUtr !== undefined) applyFieldWithConflictCheck(target, 'txnIdUtr', pool.txnId, conflicts, docId, 'Txn ID / UTR');
   }
-  if (sharedPool.accountAddress) {
-    if (updated.accountAddress !== undefined && isEmpty(updated.accountAddress)) updated.accountAddress = sharedPool.accountAddress;
-    if (updated.bankAddress !== undefined && isEmpty(updated.bankAddress)) updated.bankAddress = sharedPool.accountAddress;
+  if (pool.txnAmount) {
+    applyFieldWithConflictCheck(target, 'txnAmount', pool.txnAmount, conflicts, docId, 'Txn Amount');
   }
-  if (sharedPool.companyName && updated.companyName !== undefined && isEmpty(updated.companyName)) {
-    updated.companyName = sharedPool.companyName;
+  if (pool.accountName) {
+    applyFieldWithConflictCheck(target, 'accountName', pool.accountName, conflicts, docId, 'Account Holder');
+    if (target.accountHolderName !== undefined) applyFieldWithConflictCheck(target, 'accountHolderName', pool.accountName, conflicts, docId, 'Account Holder');
   }
-  if (sharedPool.directorsDetails) {
-    if (updated.directorsDetails !== undefined && isEmpty(updated.directorsDetails)) updated.directorsDetails = sharedPool.directorsDetails;
-    if (updated.companyDirectors !== undefined && isEmpty(updated.companyDirectors)) updated.companyDirectors = sharedPool.directorsDetails;
+  if (pool.accountAddress) {
+    applyFieldWithConflictCheck(target, 'accountAddress', pool.accountAddress, conflicts, docId, 'Account Address');
+    if (target.bankAddress !== undefined) applyFieldWithConflictCheck(target, 'bankAddress', pool.accountAddress, conflicts, docId, 'Bank Address');
   }
-  if (sharedPool.totalFraudAmount) {
-    if (updated.totalFraudAmount !== undefined && isEmpty(updated.totalFraudAmount)) updated.totalFraudAmount = sharedPool.totalFraudAmount;
+  if (pool.companyName) {
+    applyFieldWithConflictCheck(target, 'companyName', pool.companyName, conflicts, docId, 'Company Name');
+  }
+  if (pool.directorsDetails) {
+    applyFieldWithConflictCheck(target, 'directorsDetails', pool.directorsDetails, conflicts, docId, 'Directors');
+    if (target.companyDirectors !== undefined) applyFieldWithConflictCheck(target, 'companyDirectors', pool.directorsDetails, conflicts, docId, 'Company Directors');
+  }
+  if (pool.totalFraudAmount) {
+    applyFieldWithConflictCheck(target, 'totalFraudAmount', pool.totalFraudAmount, conflicts, docId, 'Total Fraud Amount');
   }
 
   // Relative details
-  if (sharedPool.relativeName) {
-    if (updated.relativeName !== undefined && isEmpty(updated.relativeName)) updated.relativeName = sharedPool.relativeName;
-    if (docId === 'form3' && isEmpty(updated.relativeIntimatedName)) updated.relativeIntimatedName = sharedPool.relativeName;
+  if (pool.relativeName) {
+    if (docId === 'form3') {
+      applyFieldWithConflictCheck(target, 'relativeIntimatedName', pool.relativeName, conflicts, docId, 'Relative Name');
+    } else if (target.relativeName !== undefined) {
+      applyFieldWithConflictCheck(target, 'relativeName', pool.relativeName, conflicts, docId, 'Relative Name');
+    }
   }
-  if (sharedPool.relation) {
-    if (updated.relation !== undefined && isEmpty(updated.relation)) updated.relation = sharedPool.relation;
-    if (updated.relativeRelation !== undefined && isEmpty(updated.relativeRelation)) updated.relativeRelation = sharedPool.relation;
+  if (pool.relation) {
+    if (target.relation !== undefined) applyFieldWithConflictCheck(target, 'relation', pool.relation, conflicts, docId, 'Relation');
+    if (target.relativeRelation !== undefined) applyFieldWithConflictCheck(target, 'relativeRelation', pool.relation, conflicts, docId, 'Relative Relation');
   }
-  if (sharedPool.relativeAddress && updated.relativeAddress !== undefined && isEmpty(updated.relativeAddress)) {
-    updated.relativeAddress = sharedPool.relativeAddress;
+  if (pool.relativeAddress && target.relativeAddress !== undefined) {
+    applyFieldWithConflictCheck(target, 'relativeAddress', pool.relativeAddress, conflicts, docId, 'Relative Address');
   }
-  if (sharedPool.relativePhone && updated.relativePhone !== undefined && isEmpty(updated.relativePhone)) {
-    updated.relativePhone = sharedPool.relativePhone;
+  if (pool.relativePhone && target.relativePhone !== undefined) {
+    applyFieldWithConflictCheck(target, 'relativePhone', pool.relativePhone, conflicts, docId, 'Relative Phone');
   }
-  if (sharedPool.relativeIntimation && updated.relativeIntimation !== undefined && isEmpty(updated.relativeIntimation)) {
-    updated.relativeIntimation = sharedPool.relativeIntimation;
-  } else if (sharedPool.relativeName && updated.relativeIntimation !== undefined && isEmpty(updated.relativeIntimation)) {
-    const relPart = sharedPool.relation ? `${sharedPool.relation} ` : '';
-    const phonePart = sharedPool.relativePhone ? `, मो. ${sharedPool.relativePhone}` : '';
-    updated.relativeIntimation = `${relPart}${sharedPool.relativeName}${phonePart}`;
+  if (pool.relativeIntimation && target.relativeIntimation !== undefined) {
+    applyFieldWithConflictCheck(target, 'relativeIntimation', pool.relativeIntimation, conflicts, docId, 'Relative Intimation');
   }
 
-  // Production Warrant / Prior Jail
-  if (sharedPool.productionWarrantDetails) {
-    if (updated.productionWarrantDetails !== undefined && isEmpty(updated.productionWarrantDetails)) updated.productionWarrantDetails = sharedPool.productionWarrantDetails;
-    if (updated.priorProductionDetails !== undefined && isEmpty(updated.priorProductionDetails)) updated.priorProductionDetails = sharedPool.productionWarrantDetails;
-    if (updated.priorCaseDetails !== undefined && isEmpty(updated.priorCaseDetails)) updated.priorCaseDetails = sharedPool.productionWarrantDetails;
+  // Production Warrant / Prior Custody
+  if (pool.productionWarrantDetails) {
+    if (target.productionWarrantDetails !== undefined) applyFieldWithConflictCheck(target, 'productionWarrantDetails', pool.productionWarrantDetails, conflicts, docId, 'Prior Custody Details');
+    if (target.priorProductionDetails !== undefined) applyFieldWithConflictCheck(target, 'priorProductionDetails', pool.productionWarrantDetails, conflicts, docId, 'Prior Custody Details');
+    if (target.priorCaseDetails !== undefined) applyFieldWithConflictCheck(target, 'priorCaseDetails', pool.productionWarrantDetails, conflicts, docId, 'Prior Case Details');
   }
-  if (sharedPool.producedFromJail) {
-    if (updated.producedFromJail !== undefined && isEmpty(updated.producedFromJail)) updated.producedFromJail = sharedPool.producedFromJail;
-    if (updated.producingAuthority !== undefined && isEmpty(updated.producingAuthority)) updated.producingAuthority = sharedPool.producedFromJail;
+  if (pool.producedFromJail) {
+    if (target.producedFromJail !== undefined) applyFieldWithConflictCheck(target, 'producedFromJail', pool.producedFromJail, conflicts, docId, 'Producing Authority');
+    if (target.producingAuthority !== undefined) applyFieldWithConflictCheck(target, 'producingAuthority', pool.producedFromJail, conflicts, docId, 'Producing Authority');
   }
-  if (sharedPool.courtProductionDate && updated.courtProductionDate !== undefined && isEmpty(updated.courtProductionDate)) {
-    updated.courtProductionDate = sharedPool.courtProductionDate;
+  if (pool.courtProductionDate && target.courtProductionDate !== undefined) {
+    applyFieldWithConflictCheck(target, 'courtProductionDate', pool.courtProductionDate, conflicts, docId, 'Court Production Date');
+  }
+}
+
+/**
+ * Apply accused details to a single-accused document (Form III, Notice 47, Notice 48).
+ */
+function applyAccusedFieldsToSingleDoc(docId, target, accused, conflicts) {
+  if (!accused) return;
+
+  if (docId === 'form3') {
+    if (accused.accusedName) {
+      applyFieldWithConflictCheck(target, 'accusedName', accused.accusedName, conflicts, 'form3', 'Accused Name');
+    }
+    if (accused.accusedFather) {
+      applyFieldWithConflictCheck(target, 'fatherName', accused.accusedFather, conflicts, 'form3', 'Father Name');
+    }
+    if (accused.accusedAlias) {
+      applyFieldWithConflictCheck(target, 'firstAlias', accused.accusedAlias, conflicts, 'form3', 'Alias');
+    }
+    if (accused.accusedAge) {
+      if (!target.physicalFeatures) target.physicalFeatures = {};
+      const currentDob = target.physicalFeatures.dob;
+      if (isEmpty(currentDob)) {
+        target.physicalFeatures = { ...target.physicalFeatures, dob: accused.accusedAge };
+      } else if (String(currentDob).trim() !== String(accused.accusedAge).trim()) {
+        conflicts.push({
+          docId: 'form3',
+          field: 'Accused Age/DOB',
+          currentVal: String(currentDob).trim(),
+          incomingVal: String(accused.accusedAge).trim()
+        });
+      }
+    }
+    if (accused.accusedAddress) {
+      if (isEmpty(target.presentAddress)) {
+        target.presentAddress = accused.accusedAddress;
+      } else if (String(target.presentAddress).trim() !== String(accused.accusedAddress).trim()) {
+        conflicts.push({
+          docId: 'form3',
+          field: 'Accused Present Address',
+          currentVal: String(target.presentAddress).trim(),
+          incomingVal: String(accused.accusedAddress).trim()
+        });
+      }
+      if (isEmpty(target.permanentAddress)) {
+        target.permanentAddress = accused.accusedAddress;
+      }
+    }
+  } else if (docId === 'notice_47' || docId === 'notice_48') {
+    if (accused.accusedName) {
+      applyFieldWithConflictCheck(target, 'accusedName', accused.accusedName, conflicts, docId, 'Accused Name');
+    }
+    if (accused.accusedAge) {
+      applyFieldWithConflictCheck(target, 'accusedAge', accused.accusedAge, conflicts, docId, 'Accused Age');
+    }
+    if (accused.accusedAddress) {
+      applyFieldWithConflictCheck(target, 'accusedAddress', accused.accusedAddress, conflicts, docId, 'Accused Address');
+    }
+  }
+}
+
+/**
+ * Apply accused details to a multiple-accused document.
+ */
+function applyAccusedFieldsToMultiDoc(docId, target, accusedDetails, conflicts) {
+  if (!accusedDetails) return;
+  const primary = accusedDetails.primary || accusedDetails;
+
+  // Primary accused
+  if (primary.accusedName) {
+    if (docId === 'arrest_permission') {
+      if (isEmpty(target.producedAccusedName)) {
+        const agePart = primary.accusedAge ? `, वय ${primary.accusedAge} वर्षे` : '';
+        const addrPart = primary.accusedAddress ? `, पत्ता – ${primary.accusedAddress}` : '';
+        target.producedAccusedName = `${primary.accusedName}${agePart}${addrPart}`;
+      } else if (!target.producedAccusedName.includes(primary.accusedName.trim())) {
+        conflicts.push({
+          docId,
+          field: 'Produced Accused Name',
+          currentVal: String(target.producedAccusedName).trim(),
+          incomingVal: primary.accusedName.trim()
+        });
+      }
+
+      if (isEmpty(target.accusedListText)) {
+        const agePart = primary.accusedAge ? `, वय ${primary.accusedAge} वर्षे` : '';
+        const addrPart = primary.accusedAddress ? `, पत्ता – ${primary.accusedAddress}` : '';
+        target.accusedListText = `१) ${primary.accusedName}${agePart}${addrPart}`;
+      }
+    } else {
+      applyFieldWithConflictCheck(target, 'accusedName', primary.accusedName, conflicts, docId, 'Accused Name');
+    }
+  }
+
+  if (docId !== 'arrest_permission') {
+    if (primary.accusedAge) {
+      applyFieldWithConflictCheck(target, 'accusedAge', primary.accusedAge, conflicts, docId, 'Accused Age');
+    }
+    if (primary.accusedAddress) {
+      applyFieldWithConflictCheck(target, 'accusedAddress', primary.accusedAddress, conflicts, docId, 'Accused Address');
+    }
+    if (primary.accusedAlias && target.accusedAlias !== undefined) {
+      applyFieldWithConflictCheck(target, 'accusedAlias', primary.accusedAlias, conflicts, docId, 'Accused Alias');
+    }
+    if (primary.accusedFather && target.accusedFather !== undefined) {
+      applyFieldWithConflictCheck(target, 'accusedFather', primary.accusedFather, conflicts, docId, 'Accused Father');
+    }
+  }
+
+  // Additional accused array
+  if (Array.isArray(accusedDetails.additionalAccused) && accusedDetails.additionalAccused.length > 0) {
+    const incomingAdditional = accusedDetails.additionalAccused;
+    const targetAdditional = target.additionalAccused;
+
+    if (!Array.isArray(targetAdditional) || targetAdditional.length === 0 || targetAdditional.every((a) => isEmpty(a.accusedName))) {
+      // Empty or absent: safely populate
+      target.additionalAccused = incomingAdditional.map((a) => ({ ...a }));
+    } else {
+      // Compare if targetAdditional matches incomingAdditional
+      const isIdentical =
+        targetAdditional.length === incomingAdditional.length &&
+        incomingAdditional.every((inAcc, idx) => {
+          const tAcc = targetAdditional[idx];
+          return tAcc && String(tAcc.accusedName || '').trim() === String(inAcc.accusedName || '').trim();
+        });
+
+      if (!isIdentical) {
+        // Conflicting accused records: preserve target's records, do NOT overwrite
+        conflicts.push({
+          docId,
+          field: 'Additional Accused List',
+          currentVal: `${targetAdditional.length} accused record(s)`,
+          incomingVal: `${incomingAdditional.length} incoming accused record(s)`
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Execute Smart Share Details operation across all documents.
+ * Returns { updatedDocs, conflictCount, conflicts }
+ */
+export function executeSmartShare({ sourceDocId, sourceData, allDocs = {}, mode = 'single' }) {
+  // 1. Extract details from current source form
+  const extractedCommon = extractCommonCrimeDetails(sourceDocId, sourceData);
+  const extractedAccused = extractAccusedDetails(sourceDocId, sourceData);
+
+  // 2. Update session pool
+  const storedPool = getStoredSharedPool();
+  const newPool = {
+    commonCase: { ...storedPool.commonCase, ...extractedCommon },
+    singleAccused: { ...storedPool.singleAccused },
+    multipleAccused: { ...storedPool.multipleAccused }
+  };
+
+  if (mode === 'single') {
+    // Only update singleAccused pool
+    if (Object.keys(extractedAccused.primary).length > 0) {
+      newPool.singleAccused = { ...newPool.singleAccused, ...extractedAccused.primary };
+    }
+  } else if (mode === 'multiple') {
+    // Only update multipleAccused pool if source is in the multiple-accused group
+    if (isMultipleAccusedDoc(sourceDocId)) {
+      if (Object.keys(extractedAccused.primary).length > 0) {
+        newPool.multipleAccused = { ...newPool.multipleAccused, ...extractedAccused.primary };
+      }
+      if (extractedAccused.additionalAccused && extractedAccused.additionalAccused.length > 0) {
+        newPool.multipleAccused.additionalAccused = extractedAccused.additionalAccused;
+      }
+    }
+  }
+
+  saveStoredSharedPool(newPool);
+
+  // 3. Apply to all documents in allDocs
+  const updatedDocs = {};
+  const conflicts = [];
+
+  const allDocIds = Object.keys(allDocs);
+  for (const docId of allDocIds) {
+    if (docId === sourceDocId) {
+      // Source form keeps its latest data exactly
+      updatedDocs[docId] = { ...sourceData };
+      continue;
+    }
+
+    const currentDocData = allDocs[docId] || {};
+    const updated = { ...currentDocData };
+
+    // A. Apply Common Crime Details to ALL documents
+    applyCommonCrimeFields(docId, updated, newPool.commonCase, conflicts);
+
+    // B. Apply Accused Details based on selected mode
+    if (mode === 'single') {
+      // Single-accused personal details propagate ONLY among SINGLE_ACCUSED_DOCS
+      if (isSingleAccusedDoc(docId)) {
+        applyAccusedFieldsToSingleDoc(docId, updated, newPool.singleAccused, conflicts);
+      }
+      // MULTIPLE_ACCUSED_DOCS get ZERO accused personal details in single mode
+    } else if (mode === 'multiple') {
+      // Multiple-accused personal details propagate ONLY within MULTIPLE_ACCUSED_DOCS
+      // and only if source document is from the multiple-accused group
+      if (isMultipleAccusedDoc(docId) && isMultipleAccusedDoc(sourceDocId)) {
+        applyAccusedFieldsToMultiDoc(docId, updated, newPool.multipleAccused, conflicts);
+      }
+      // SINGLE_ACCUSED_DOCS get ZERO accused personal details in multiple mode
+    }
+
+    updatedDocs[docId] = updated;
+  }
+
+  return {
+    updatedDocs,
+    conflictCount: conflicts.length,
+    conflicts
+  };
+}
+
+/**
+ * Apply smart shared details pool when a document is selected or restored.
+ * Strictly respects single-accused vs multiple-accused boundaries.
+ */
+export function applySmartSharedDetailsToDoc(docId, targetDocData = {}, pool = null) {
+  const currentPool = pool || getStoredSharedPool();
+  const updated = { ...targetDocData };
+  const dummyConflicts = [];
+
+  // 1. Common Crime Details apply to ALL forms
+  if (currentPool.commonCase && Object.keys(currentPool.commonCase).length > 0) {
+    applyCommonCrimeFields(docId, updated, currentPool.commonCase, dummyConflicts);
+  }
+
+  // 2. Accused Details apply strictly according to group
+  if (isSingleAccusedDoc(docId)) {
+    if (currentPool.singleAccused && Object.keys(currentPool.singleAccused).length > 0) {
+      applyAccusedFieldsToSingleDoc(docId, updated, currentPool.singleAccused, dummyConflicts);
+    }
+  } else if (isMultipleAccusedDoc(docId)) {
+    if (currentPool.multipleAccused && Object.keys(currentPool.multipleAccused).length > 0) {
+      applyAccusedFieldsToMultiDoc(docId, updated, currentPool.multipleAccused, dummyConflicts);
+    }
   }
 
   return updated;
 }
 
+/**
+ * Backward compatibility: original applySharedDetailsToDoc
+ */
+export function applySharedDetailsToDoc(docId, targetDocData = {}, sharedPool = {}) {
+  // If passed a structured pool with commonCase
+  if (sharedPool.commonCase || sharedPool.singleAccused || sharedPool.multipleAccused) {
+    return applySmartSharedDetailsToDoc(docId, targetDocData, sharedPool);
+  }
+
+  // If passed a flat pool, partition it and apply safely
+  const partitioned = {
+    commonCase: { ...sharedPool },
+    singleAccused: isSingleAccusedDoc(docId) ? { ...sharedPool } : {},
+    multipleAccused: isMultipleAccusedDoc(docId) ? { ...sharedPool } : {}
+  };
+  return applySmartSharedDetailsToDoc(docId, targetDocData, partitioned);
+}

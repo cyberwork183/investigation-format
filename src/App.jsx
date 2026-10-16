@@ -4,6 +4,7 @@ import SecurityBanner from './components/SecurityBanner';
 import Dashboard from './components/Dashboard';
 import DocumentTopBar from './components/shared/DocumentTopBar';
 import ClearModal from './components/ClearModal';
+import ShareDetailsModal from './components/shared/ShareDetailsModal';
 import Toast from './components/Toast';
 
 // Dedicated Forms
@@ -47,10 +48,10 @@ import {
 } from './utils/documentSchemas';
 
 import {
-  getStoredSharedDetails,
-  saveStoredSharedDetails,
-  extractSharedDetailsFromDoc,
-  applySharedDetailsToDoc
+  getStoredSharedPool,
+  hasAnyShareableDetails,
+  executeSmartShare,
+  applySmartSharedDetailsToDoc
 } from './utils/shareDetails';
 
 export default function App() {
@@ -76,6 +77,13 @@ export default function App() {
 
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
+  // Smart Share Details Selection Modal state
+  const [shareModalState, setShareModalState] = useState({
+    isOpen: false,
+    sourceDocId: null,
+    sourceData: null
+  });
+
   const [toast, setToast] = useState({
     isVisible: false,
     message: '',
@@ -88,42 +96,80 @@ export default function App() {
     setToast({ isVisible: true, message, isSuccess });
     toastTimerRef.current = setTimeout(() => {
       setToast((prev) => ({ ...prev, isVisible: false }));
-    }, 3200);
+    }, 4000);
   };
 
   /**
    * Share Details Action:
-   * Collects all currently entered non-empty values from source form,
-   * stores them in session pool, and populates matching empty fields in all other forms.
-   * Preserves existing non-empty values in other forms.
+   * Opens selection UI (Single Accused vs Multiple Accused).
    */
-  const handleShareDetails = (sourceDocId, currentFormData) => {
-    const extracted = extractSharedDetailsFromDoc(sourceDocId, currentFormData);
-    const keyCount = Object.keys(extracted).length;
-
-    if (keyCount === 0) {
+  const handleShareClick = (sourceDocId, currentFormData) => {
+    if (!hasAnyShareableDetails(sourceDocId, currentFormData)) {
       showToast('No non-empty details to share yet / शेअर करण्यासाठी कोणतीही माहिती भरलेली नाही', false);
       return;
     }
 
-    const currentStored = getStoredSharedDetails();
-    const updatedSharedPool = { ...currentStored, ...extracted };
-    saveStoredSharedDetails(updatedSharedPool);
+    setShareModalState({
+      isOpen: true,
+      sourceDocId,
+      sourceData: currentFormData
+    });
+  };
 
-    // Apply to all document forms (only fills empty fields, preserves existing non-empty data)
-    setForm3Data((prev) => (sourceDocId === 'form3' ? currentFormData : applySharedDetailsToDoc('form3', prev, updatedSharedPool)));
-    setRemandData((prev) => (sourceDocId === 'remand' ? currentFormData : applySharedDetailsToDoc('remand', prev, updatedSharedPool)));
-    setMedicalData((prev) => (sourceDocId === 'medical' ? currentFormData : applySharedDetailsToDoc('medical', prev, updatedSharedPool)));
-    setLockupPsData((prev) => (sourceDocId === 'lockup_ps' ? currentFormData : applySharedDetailsToDoc('lockup_ps', prev, updatedSharedPool)));
-    setLockupAcpData((prev) => (sourceDocId === 'lockup_acp' ? currentFormData : applySharedDetailsToDoc('lockup_acp', prev, updatedSharedPool)));
-    setCustodyTransferData((prev) => (sourceDocId === 'custody_transfer' ? currentFormData : applySharedDetailsToDoc('custody_transfer', prev, updatedSharedPool)));
-    setArrestPermissionData((prev) => (sourceDocId === 'arrest_permission' ? currentFormData : applySharedDetailsToDoc('arrest_permission', prev, updatedSharedPool)));
-    setNotice352Data((prev) => (sourceDocId === 'notice_35_2' ? currentFormData : applySharedDetailsToDoc('notice_35_2', prev, updatedSharedPool)));
-    setAtakSanhaData((prev) => (sourceDocId === 'atak_sanha' ? currentFormData : applySharedDetailsToDoc('atak_sanha', prev, updatedSharedPool)));
-    setNotice47Data((prev) => (sourceDocId === 'notice_47' ? currentFormData : applySharedDetailsToDoc('notice_47', prev, updatedSharedPool)));
-    setNotice48Data((prev) => (sourceDocId === 'notice_48' ? currentFormData : applySharedDetailsToDoc('notice_48', prev, updatedSharedPool)));
+  /**
+   * Confirms Smart Share in either Single-Accused or Multiple-Accused mode.
+   */
+  const handleConfirmShare = (mode) => {
+    const { sourceDocId, sourceData } = shareModalState;
+    setShareModalState({ isOpen: false, sourceDocId: null, sourceData: null });
 
-    showToast(`Details shared! ${keyCount} field(s) available to other forms. / माहिती इतर फॉर्ममध्ये उपलब्ध केली.`);
+    if (!sourceDocId || !sourceData) return;
+
+    const allDocs = {
+      form3: form3Data,
+      remand: remandData,
+      medical: medicalData,
+      lockup_ps: lockupPsData,
+      lockup_acp: lockupAcpData,
+      custody_transfer: custodyTransferData,
+      arrest_permission: arrestPermissionData,
+      notice_35_2: notice352Data,
+      atak_sanha: atakSanhaData,
+      notice_47: notice47Data,
+      notice_48: notice48Data
+    };
+
+    const { updatedDocs, conflictCount } = executeSmartShare({
+      sourceDocId,
+      sourceData,
+      allDocs,
+      mode
+    });
+
+    if (updatedDocs.form3) setForm3Data(updatedDocs.form3);
+    if (updatedDocs.remand) setRemandData(updatedDocs.remand);
+    if (updatedDocs.medical) setMedicalData(updatedDocs.medical);
+    if (updatedDocs.lockup_ps) setLockupPsData(updatedDocs.lockup_ps);
+    if (updatedDocs.lockup_acp) setLockupAcpData(updatedDocs.lockup_acp);
+    if (updatedDocs.custody_transfer) setCustodyTransferData(updatedDocs.custody_transfer);
+    if (updatedDocs.arrest_permission) setArrestPermissionData(updatedDocs.arrest_permission);
+    if (updatedDocs.notice_35_2) setNotice352Data(updatedDocs.notice_35_2);
+    if (updatedDocs.atak_sanha) setAtakSanhaData(updatedDocs.atak_sanha);
+    if (updatedDocs.notice_47) setNotice47Data(updatedDocs.notice_47);
+    if (updatedDocs.notice_48) setNotice48Data(updatedDocs.notice_48);
+
+    const modeName = mode === 'single' ? 'Single Accused' : 'Multiple Accused';
+    if (conflictCount > 0) {
+      showToast(
+        `Common case details shared (${modeName} mode). Note: ${conflictCount} conflicting field(s) were preserved and not overwritten.`,
+        true
+      );
+    } else {
+      showToast(
+        `Common case details shared successfully. Accused details shared according to ${modeName} mode.`,
+        true
+      );
+    }
   };
 
   // Fill sample data for active document
@@ -220,19 +266,19 @@ export default function App() {
   // When opening a document from dashboard, ensure any stored shared details populate empty fields
   const handleSelectDoc = (id) => {
     dashboardScrollPosRef.current = window.scrollY || window.pageYOffset || 0;
-    const shared = getStoredSharedDetails();
-    if (Object.keys(shared).length > 0) {
-      if (id === 'form3') setForm3Data((prev) => applySharedDetailsToDoc('form3', prev, shared));
-      else if (id === 'remand') setRemandData((prev) => applySharedDetailsToDoc('remand', prev, shared));
-      else if (id === 'medical') setMedicalData((prev) => applySharedDetailsToDoc('medical', prev, shared));
-      else if (id === 'lockup_ps') setLockupPsData((prev) => applySharedDetailsToDoc('lockup_ps', prev, shared));
-      else if (id === 'lockup_acp') setLockupAcpData((prev) => applySharedDetailsToDoc('lockup_acp', prev, shared));
-      else if (id === 'custody_transfer') setCustodyTransferData((prev) => applySharedDetailsToDoc('custody_transfer', prev, shared));
-      else if (id === 'arrest_permission') setArrestPermissionData((prev) => applySharedDetailsToDoc('arrest_permission', prev, shared));
-      else if (id === 'notice_35_2') setNotice352Data((prev) => applySharedDetailsToDoc('notice_35_2', prev, shared));
-      else if (id === 'atak_sanha') setAtakSanhaData((prev) => applySharedDetailsToDoc('atak_sanha', prev, shared));
-      else if (id === 'notice_47') setNotice47Data((prev) => applySharedDetailsToDoc('notice_47', prev, shared));
-      else if (id === 'notice_48') setNotice48Data((prev) => applySharedDetailsToDoc('notice_48', prev, shared));
+    const pool = getStoredSharedPool();
+    if (pool && (Object.keys(pool.commonCase || {}).length > 0 || Object.keys(pool.singleAccused || {}).length > 0 || Object.keys(pool.multipleAccused || {}).length > 0)) {
+      if (id === 'form3') setForm3Data((prev) => applySmartSharedDetailsToDoc('form3', prev, pool));
+      else if (id === 'remand') setRemandData((prev) => applySmartSharedDetailsToDoc('remand', prev, pool));
+      else if (id === 'medical') setMedicalData((prev) => applySmartSharedDetailsToDoc('medical', prev, pool));
+      else if (id === 'lockup_ps') setLockupPsData((prev) => applySmartSharedDetailsToDoc('lockup_ps', prev, pool));
+      else if (id === 'lockup_acp') setLockupAcpData((prev) => applySmartSharedDetailsToDoc('lockup_acp', prev, pool));
+      else if (id === 'custody_transfer') setCustodyTransferData((prev) => applySmartSharedDetailsToDoc('custody_transfer', prev, pool));
+      else if (id === 'arrest_permission') setArrestPermissionData((prev) => applySmartSharedDetailsToDoc('arrest_permission', prev, pool));
+      else if (id === 'notice_35_2') setNotice352Data((prev) => applySmartSharedDetailsToDoc('notice_35_2', prev, pool));
+      else if (id === 'atak_sanha') setAtakSanhaData((prev) => applySmartSharedDetailsToDoc('atak_sanha', prev, pool));
+      else if (id === 'notice_47') setNotice47Data((prev) => applySmartSharedDetailsToDoc('notice_47', prev, pool));
+      else if (id === 'notice_48') setNotice48Data((prev) => applySmartSharedDetailsToDoc('notice_48', prev, pool));
     }
     setActiveDocId(id);
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -283,7 +329,7 @@ export default function App() {
                 formData={form3Data}
                 setFormData={setForm3Data}
                 showToast={showToast}
-                onShareDetails={(data) => handleShareDetails('form3', data)}
+                onShareDetails={(data) => handleShareClick('form3', data)}
               />
             )}
 
@@ -293,7 +339,7 @@ export default function App() {
                 setFormData={setRemandData}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('remand', data)}
+                onShareDetails={(data) => handleShareClick('remand', data)}
               />
             )}
 
@@ -303,7 +349,7 @@ export default function App() {
                 setFormData={setMedicalData}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('medical', data)}
+                onShareDetails={(data) => handleShareClick('medical', data)}
               />
             )}
 
@@ -313,7 +359,7 @@ export default function App() {
                 setFormData={setLockupPsData}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('lockup_ps', data)}
+                onShareDetails={(data) => handleShareClick('lockup_ps', data)}
               />
             )}
 
@@ -323,7 +369,7 @@ export default function App() {
                 setFormData={setLockupAcpData}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('lockup_acp', data)}
+                onShareDetails={(data) => handleShareClick('lockup_acp', data)}
               />
             )}
 
@@ -333,7 +379,7 @@ export default function App() {
                 setFormData={setCustodyTransferData}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('custody_transfer', data)}
+                onShareDetails={(data) => handleShareClick('custody_transfer', data)}
               />
             )}
 
@@ -343,7 +389,7 @@ export default function App() {
                 setFormData={setArrestPermissionData}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('arrest_permission', data)}
+                onShareDetails={(data) => handleShareClick('arrest_permission', data)}
               />
             )}
 
@@ -353,7 +399,7 @@ export default function App() {
                 setFormData={setNotice352Data}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('notice_35_2', data)}
+                onShareDetails={(data) => handleShareClick('notice_35_2', data)}
               />
             )}
 
@@ -363,7 +409,7 @@ export default function App() {
                 setFormData={setAtakSanhaData}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('atak_sanha', data)}
+                onShareDetails={(data) => handleShareClick('atak_sanha', data)}
               />
             )}
 
@@ -373,7 +419,7 @@ export default function App() {
                 setFormData={setNotice47Data}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('notice_47', data)}
+                onShareDetails={(data) => handleShareClick('notice_47', data)}
               />
             )}
 
@@ -383,7 +429,7 @@ export default function App() {
                 setFormData={setNotice48Data}
                 showToast={showToast}
                 docType={activeDocType}
-                onShareDetails={(data) => handleShareDetails('notice_48', data)}
+                onShareDetails={(data) => handleShareClick('notice_48', data)}
               />
             )}
           </div>
@@ -394,6 +440,13 @@ export default function App() {
         isOpen={isClearModalOpen}
         onCancel={() => setIsClearModalOpen(false)}
         onConfirm={handleConfirmClear}
+      />
+
+      <ShareDetailsModal
+        isOpen={shareModalState.isOpen}
+        sourceDocId={shareModalState.sourceDocId}
+        onClose={() => setShareModalState({ isOpen: false, sourceDocId: null, sourceData: null })}
+        onConfirm={handleConfirmShare}
       />
 
       <Toast

@@ -1794,6 +1794,258 @@ textarea.form-control {
   flex-shrink: 0;
 }
 
+/* ---------------- SMART SHARE DETAILS MODAL ---------------- */
+.share-details-modal-card {
+  max-width: 500px;
+  width: 100%;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-subtle);
+  position: relative;
+}
+
+.share-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.share-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.share-modal-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--gov-blue-50);
+  color: var(--gov-blue-700);
+  border: 1.5px solid var(--gov-blue-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.share-modal-title-wrap h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--primary-900);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.share-modal-subtitle-mr {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  display: block;
+  margin-top: 2px;
+}
+
+.share-modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.share-modal-close-btn:hover {
+  background: var(--bg-alt);
+  color: var(--primary-900);
+}
+
+.share-modal-prompt {
+  font-size: 0.88rem;
+  color: var(--text-main);
+  margin-bottom: 0.85rem;
+  font-weight: 500;
+}
+
+.share-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.share-mode-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  outline: none;
+  user-select: none;
+}
+
+.share-mode-card:hover {
+  border-color: var(--gov-blue-600);
+  background: var(--gov-blue-50);
+  transform: translateY(-1px);
+}
+
+.share-mode-card.selected {
+  border-color: var(--gov-blue-700);
+  background: #eff6ff;
+  box-shadow: 0 0 0 1px var(--gov-blue-700);
+}
+
+.share-mode-radio-wrap {
+  padding-top: 3px;
+  flex-shrink: 0;
+}
+
+.share-mode-radio-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.share-mode-radio-circle.active {
+  border-color: var(--gov-blue-700);
+}
+
+.share-mode-radio-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--gov-blue-700);
+}
+
+.share-mode-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--bg-alt);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.share-mode-card.selected .share-mode-icon-box {
+  background: var(--gov-blue-700);
+  color: #ffffff;
+}
+
+.share-mode-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-mode-title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.share-mode-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--primary-900);
+}
+
+.share-mode-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.share-mode-badge.single {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.share-mode-badge.multi {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.share-mode-desc {
+  font-size: 0.82rem;
+  color: var(--text-main);
+  margin-bottom: 0.2rem;
+  line-height: 1.35;
+}
+
+.share-mode-desc-mr {
+  font-size: 0.77rem;
+  color: var(--text-muted);
+  display: block;
+  line-height: 1.3;
+}
+
+.share-common-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  background: #f8fafc;
+  border-left: 3.5px solid var(--gov-blue-600);
+  border-radius: 4px;
+  font-size: 0.79rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 1.25rem;
+}
+
+.share-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.btn-confirm-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .share-details-modal-card {
+    padding: 1rem;
+    margin: 0.5rem;
+  }
+  .share-modal-footer {
+    flex-direction: column-reverse;
+  }
+  .share-modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ==========================================================================
    COMPREHENSIVE RESPONSIVE DESIGN SYSTEM
    Supports: 320px - 1920px+ (Mobile, Tablet, Laptop, Desktop)
